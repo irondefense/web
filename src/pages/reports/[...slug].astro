@@ -1,29 +1,180 @@
 ---
 import { getCollection, render } from "astro:content";
-import BaseLayout from "../../layouts/BaseLayout.astro";
+import ReportLayout from "../../layouts/ReportLayout.astro";
+import { buildReportGroups, getReportHref } from "../../lib/reports";
+
+const repoUrl = "https://github.com/irondefence/MalReports";
 
 export async function getStaticPaths() {
-  const reports = await getCollection("reports", ({ data }) => !data.draft);
+  const reportGroups = buildReportGroups(
+    await getCollection("reports", ({ data }) => !data.draft)
+  );
 
-  return reports.map((report) => ({
-    params: { slug: report.id },
-    props: { report }
-  }));
+  return reportGroups.flatMap((group) => {
+    const defaultEntry = group.byLang.en ?? group.primary;
+    const paths = [
+      {
+        params: { slug: group.reportId },
+        props: { report: defaultEntry, group },
+      },
+    ];
+
+    if (group.byLang.pl) {
+      paths.push({
+        params: { slug: `${group.reportId}/pl` },
+        props: { report: group.byLang.pl, group },
+      });
+    }
+
+    return paths;
+  });
 }
 
-const { report } = Astro.props;
-const { Content } = await render(report);
+const { report, group } = Astro.props;
+const { Content, headings } = await render(report);
+
+const englishHref = group.byLang.en ? getReportHref(group.reportId, "en") : null;
+const polishHref = group.byLang.pl ? getReportHref(group.reportId, "pl") : null;
+const languageLabel = report.data.lang === "en" ? "English" : "Polish";
+const availableLanguages = Object.keys(group.byLang).join(" / ").toUpperCase();
 ---
 
-<BaseLayout title={report.data.title} description={report.data.description}>
-  <header>
-    <p class="eyebrow">Raport</p>
-    <h1>{report.data.title}</h1>
-    <p class="meta">{report.data.date.toLocaleDateString("pl-PL")}</p>
-    <p><a href="/reports/">Wroc do listy</a></p>
+<ReportLayout
+  title={`${report.data.title} | MalReports`}
+  description={report.data.description}
+  repoUrl={repoUrl}
+>
+  <header class="report-hero">
+    <div class="report-topbar">
+      <a class="back-link" href="/reports/">Back to archive</a>
+
+      <div class="lang-switch">
+        <span class="lang-label">Language</span>
+        <a class:list={["lang-link", report.data.lang === "en" && "active", !englishHref && "disabled"]} href={englishHref ?? "#"}>ENG</a>
+        <a class:list={["lang-link", report.data.lang === "pl" && "active", !polishHref && "disabled"]} href={polishHref ?? "#"}>PL</a>
+      </div>
+    </div>
+
+    <p class="report-kicker">Report dossier</p>
+    <h1 class="report-title">{report.data.title}</h1>
+    {report.data.description && <p class="report-description">{report.data.description}</p>}
+
+    <div class="report-info-grid">
+      <div class="info-card">
+        <span class="info-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M7.5 3.75V6"></path>
+            <path d="M16.5 3.75V6"></path>
+            <path d="M4.5 8.25h15"></path>
+            <rect x="4.5" y="5.25" width="15" height="14.25" rx="2"></rect>
+          </svg>
+        </span>
+        <div class="info-card-copy">
+          <span class="info-card-label">Published</span>
+          <span class="info-card-value">{report.data.date.toLocaleDateString("pl-PL")}</span>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <span class="info-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M9 7.5 5.25 12 9 16.5"></path>
+            <path d="m15 7.5 3.75 4.5-3.75 4.5"></path>
+          </svg>
+        </span>
+        <div class="info-card-copy">
+          <span class="info-card-label">Report ID</span>
+          <span class="info-card-value">{report.data.reportId}</span>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <span class="info-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 3.75c3.728 0 6.75 3.246 6.75 7.25S15.728 18.25 12 18.25 5.25 15.004 5.25 11 8.272 3.75 12 3.75Z"></path>
+            <path d="M5.75 13.5h12.5"></path>
+            <path d="M12 4c1.65 1.6 2.625 4.23 2.625 7S13.65 16.4 12 18"></path>
+            <path d="M12 4c-1.65 1.6-2.625 4.23-2.625 7S10.35 16.4 12 18"></path>
+          </svg>
+        </span>
+        <div class="info-card-copy">
+          <span class="info-card-label">Language</span>
+          <span class="info-card-value">{languageLabel}</span>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <span class="info-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4.5 7.5h15"></path>
+            <path d="M4.5 12h15"></path>
+            <path d="M4.5 16.5h10.5"></path>
+          </svg>
+        </span>
+        <div class="info-card-copy">
+          <span class="info-card-label">Available</span>
+          <span class="info-card-value">{availableLanguages}</span>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <span class="info-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 4.5 5.25 7.5v4.5c0 3.75 2.4 7.15 6.75 8.25 4.35-1.1 6.75-4.5 6.75-8.25V7.5L12 4.5Z"></path>
+          </svg>
+        </span>
+        <div class="info-card-copy">
+          <span class="info-card-label">TLP</span>
+          <span class="info-card-value">{report.data.tlp.toUpperCase()}</span>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <span class="info-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M6.75 6.75h10.5"></path>
+            <path d="M6.75 12h10.5"></path>
+            <path d="M6.75 17.25h7.5"></path>
+          </svg>
+        </span>
+        <div class="info-card-copy">
+          <span class="info-card-label">Sections</span>
+          <span class="info-card-value">{headings.length}</span>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <span class="info-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="m10.5 4.5 8.25 8.25-6 6-8.25-8.25V4.5h6Z"></path>
+            <path d="M8.25 8.25h.008"></path>
+          </svg>
+        </span>
+        <div class="info-card-copy">
+          <span class="info-card-label">Tags</span>
+          <span class="info-card-value">
+            {report.data.tags.length > 0 ? report.data.tags.join(", ") : "malware analysis"}
+          </span>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <span class="info-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M6 4.5h12A1.5 1.5 0 0 1 19.5 6v12A1.5 1.5 0 0 1 18 19.5H6A1.5 1.5 0 0 1 4.5 18V6A1.5 1.5 0 0 1 6 4.5Z"></path>
+            <path d="M8.25 9.75h7.5"></path>
+            <path d="M8.25 14.25h4.5"></path>
+          </svg>
+        </span>
+        <div class="info-card-copy">
+          <span class="info-card-label">Format</span>
+          <span class="info-card-value">Markdown + Shiki</span>
+        </div>
+      </div>
+    </div>
   </header>
 
-  <article>
+  <article class="report-prose">
     <Content />
   </article>
-</BaseLayout>
+</ReportLayout>

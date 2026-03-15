@@ -1,28 +1,306 @@
 ---
 import { getCollection } from "astro:content";
-import BaseLayout from "../../layouts/BaseLayout.astro";
+import TopNav from "../../components/home/TopNav.astro";
+import LandingLayout from "../../layouts/LandingLayout.astro";
+import { buildReportGroups, getReportHref } from "../../lib/reports";
 
-const reports = (await getCollection("reports", ({ data }) => !data.draft)).sort(
-  (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
-);
+const repoUrl = "https://github.com/irondefence/MalReports";
+const reports = buildReportGroups(await getCollection("reports", ({ data }) => !data.draft));
 ---
 
-<BaseLayout title="Raporty" description="Lista raportow w Markdown.">
-  <header>
-    <p class="eyebrow">Astro + Markdown</p>
-    <h1>Raporty</h1>
-    <p>Dodawaj kolejne pliki w <code>src/content/reports</code>, a pojawia sie tutaj automatycznie.</p>
-  </header>
+<LandingLayout title="Reports | MalReports" description="Lista wszystkich raportow malware i CTI.">
+  <TopNav repoUrl={repoUrl} />
 
-  <section class="card-list">
-    {
-      reports.map((report) => (
-        <a class="card" href={`/reports/${report.id}/`}>
-          <h2>{report.data.title}</h2>
-          <p class="meta">{report.data.date.toLocaleDateString("pl-PL")}</p>
-          {report.data.description && <p>{report.data.description}</p>}
-        </a>
-      ))
+  <style>
+    .reports-page {
+      padding: 3rem 0 4rem;
     }
-  </section>
-</BaseLayout>
+
+    .archive-hero {
+      display: grid;
+      gap: 1.6rem;
+      padding: 2rem 0 2.5rem;
+      border-bottom: 1px solid var(--landing-line);
+    }
+
+    .archive-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.9rem;
+      margin: 0;
+      color: var(--landing-accent);
+      font-family: var(--font-mono);
+      font-size: 0.96rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .archive-kicker::before {
+      content: "";
+      width: 2.4rem;
+      height: 2px;
+      background: var(--landing-accent);
+    }
+
+    .archive-heading {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+    }
+
+    .archive-heading h1 {
+      margin: 0;
+      color: var(--landing-text-strong);
+      font-size: clamp(3.2rem, 8vw, 5.4rem);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+      text-transform: uppercase;
+    }
+
+    .archive-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 5.6rem;
+      min-height: 5.6rem;
+      padding: 0.9rem;
+      border: 1px solid var(--landing-line);
+      border-radius: 50%;
+      color: var(--landing-text-strong);
+      font-family: var(--font-display);
+      font-size: 1.9rem;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .archive-intro {
+      max-width: 46rem;
+      margin: 0;
+      padding-left: 1.15rem;
+      border-left: 3px solid var(--landing-accent);
+      font-size: 1.08rem;
+      line-height: 1.8;
+    }
+
+    .archive-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+    }
+
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.3rem;
+      padding: 0 0.85rem;
+      border: 1px solid var(--landing-line);
+      color: var(--landing-text-strong);
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .reports-grid {
+      display: grid;
+      gap: 1rem;
+      padding-top: 2rem;
+    }
+
+    .report-row {
+      display: grid;
+      gap: 1.1rem;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: start;
+      padding: 1.4rem 1.45rem;
+      border: 1px solid rgba(158, 184, 201, 0.14);
+      background: rgba(38, 42, 48, 0.54);
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease;
+    }
+
+    .report-row:hover {
+      transform: translateY(-2px);
+      border-color: rgba(158, 184, 201, 0.3);
+      background: rgba(45, 49, 56, 0.76);
+    }
+
+    .report-index {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 3.4rem;
+      min-height: 3.4rem;
+      border: 1px solid var(--landing-line);
+      color: var(--landing-accent);
+      font-family: var(--font-mono);
+      font-size: 0.94rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .report-copy {
+      display: grid;
+      gap: 0.7rem;
+      min-width: 0;
+    }
+
+    .report-copy h2 {
+      margin: 0;
+      color: var(--landing-text-strong);
+      font-size: clamp(1.55rem, 3vw, 2.1rem);
+      line-height: 1.15;
+    }
+
+    .report-copy p {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.75;
+    }
+
+    .report-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+    }
+
+    .report-tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2rem;
+      padding: 0 0.75rem;
+      border: 1px solid rgba(158, 184, 201, 0.18);
+      color: #c7d3db;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .report-side {
+      display: grid;
+      gap: 0.8rem;
+      justify-items: end;
+      min-width: 9rem;
+    }
+
+    .report-date {
+      color: #c7d3db;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .report-link {
+      color: var(--landing-accent);
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .empty-state {
+      padding: 2rem 0 0;
+      color: var(--landing-text);
+      font-size: 1rem;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 860px) {
+      .archive-heading {
+        grid-template-columns: 1fr;
+      }
+
+      .archive-count {
+        min-width: 4.5rem;
+        min-height: 4.5rem;
+        border-radius: 1rem;
+      }
+
+      .report-row {
+        grid-template-columns: 1fr;
+      }
+
+      .report-index {
+        min-width: 3rem;
+        min-height: 3rem;
+        width: fit-content;
+      }
+
+      .report-side {
+        justify-items: start;
+        min-width: 0;
+      }
+    }
+  </style>
+
+  <main class="reports-page">
+    <section class="archive-hero">
+      <p class="archive-kicker">Reports Archive</p>
+
+      <div class="archive-heading">
+        <h1>All Reports</h1>
+        <div class="archive-count">{reports.length}</div>
+      </div>
+
+      <p class="archive-intro">
+        Central archive for malware analysis notes, reverse engineering write-ups and CTI
+        observations. Each entry is published as a standalone report ready for fast review.
+      </p>
+
+      <div class="archive-meta">
+        <span class="meta-pill">English default</span>
+        <span class="meta-pill">Optional Polish translation</span>
+        <span class="meta-pill">Static archive</span>
+      </div>
+    </section>
+
+    {
+      reports.length > 0 ? (
+        <section class="reports-grid">
+          {reports.map((report, index) => (
+            <a class="report-row" href={getReportHref(report.reportId, report.primary.data.lang)}>
+              <span class="report-index">{String(index + 1).padStart(2, "0")}</span>
+
+              <div class="report-copy">
+                <h2>{report.primary.data.title}</h2>
+                <p>
+                  {report.primary.data.description ??
+                    "Technical report covering malware behavior, execution flow and detection-relevant findings."}
+                </p>
+
+                <div class="report-tags">
+                  {report.primary.data.tags.length > 0 ? (
+                    report.primary.data.tags.map((tag) => <span class="report-tag">{tag}</span>)
+                  ) : (
+                    <>
+                      <span class="report-tag">Malware analysis</span>
+                      <span class="report-tag">CTI</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div class="report-side">
+                <span class="report-date">{report.primary.data.date.toLocaleDateString("pl-PL")}</span>
+                <span class="report-link">Open report ></span>
+              </div>
+            </a>
+          ))}
+        </section>
+      ) : (
+        <p class="empty-state">No reports published yet.</p>
+      )
+    }
+  </main>
+</LandingLayout>

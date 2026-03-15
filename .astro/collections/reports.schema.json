@@ -2,6 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
+    "reportId": {
+      "type": "string"
+    },
+    "lang": {
+      "type": "string",
+      "enum": [
+        "en",
+        "pl"
+      ]
+    },
     "title": {
       "type": "string"
     },
@@ -16,14 +26,35 @@
       "default": false,
       "type": "boolean"
     },
+    "tlp": {
+      "default": "clear",
+      "type": "string",
+      "enum": [
+        "clear",
+        "green",
+        "amber",
+        "red"
+      ]
+    },
+    "tags": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "$schema": {
       "type": "string"
     }
   },
   "required": [
+    "reportId",
+    "lang",
     "title",
     "date",
-    "draft"
+    "draft",
+    "tlp",
+    "tags"
   ],
   "additionalProperties": false
 }

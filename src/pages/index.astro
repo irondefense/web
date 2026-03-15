@@ -1,3 +1,81 @@
 ---
-Astro.redirect("/reports");
+import { getCollection } from "astro:content";
+import AboutSection from "../components/home/AboutSection.astro";
+import HeroSection from "../components/home/HeroSection.astro";
+import ReportsPreviewSection from "../components/home/ReportsPreviewSection.astro";
+import TopNav from "../components/home/TopNav.astro";
+import LandingLayout from "../layouts/LandingLayout.astro";
+import { buildReportGroups, getReportHref } from "../lib/reports";
+
+type PreviewReport = {
+  href: string;
+  title: string;
+  description: string;
+  tag: string;
+  severity: string;
+  tone: "critical" | "high" | "medium";
+};
+
+const repoUrl = "https://github.com/irondefence/MalReports";
+
+const reportThemes: Array<Pick<PreviewReport, "tag" | "severity" | "tone">> = [
+  { tag: "Featured", severity: "Critical", tone: "critical" },
+  { tag: "Intel", severity: "High", tone: "high" },
+  { tag: "Archive", severity: "Medium", tone: "medium" }
+];
+
+const reports = buildReportGroups(await getCollection("reports", ({ data }) => !data.draft))
+  .slice(0, 3)
+  .map((report, index): PreviewReport => ({
+    href: getReportHref(report.reportId, report.primary.data.lang),
+    title: report.primary.data.title,
+    description:
+      report.primary.data.description ??
+      "Technical report covering execution flow, behavioral artifacts and detection-relevant observations.",
+    ...reportThemes[index]!
+  }));
+
+const fallbackReports: PreviewReport[] = [
+  {
+    href: "/reports/",
+    title: "Additional malware write-ups in progress",
+    description:
+      "Upcoming reports will extend the archive with new reverse engineering notes and CTI observations.",
+    tag: "Intel",
+    severity: "High",
+    tone: "high"
+  },
+  {
+    href: "/reports/",
+    title: "Detection-focused case studies incoming",
+    description:
+      "Future entries will cover behavior chains, IOCs, ATT&CK mapping and response-oriented conclusions.",
+    tag: "Archive",
+    severity: "Medium",
+    tone: "medium"
+  }
+];
+
+const previewReports = [...reports];
+
+for (const fallback of fallbackReports) {
+  if (previewReports.length >= 3) break;
+  previewReports.push(fallback);
+}
 ---
+
+<LandingLayout
+  title="MalReports | Malware Analysis Lab"
+  description="Techniczna strona z raportami malware analysis i cyber threat intelligence."
+>
+  <TopNav repoUrl={repoUrl} />
+  <HeroSection repoUrl={repoUrl} />
+  <main>
+    <AboutSection />
+    <ReportsPreviewSection previewReports={previewReports} />
+  </main>
+  <footer class="landing-footer">
+    <span>// irondefence © 2026</span>
+    <span>Threat intelligence for educational purposes only</span>
+  </footer>
+</LandingLayout>

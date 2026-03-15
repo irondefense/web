@@ -1,0 +1,120 @@
+---
+interface Props {
+  repoUrl: string;
+}
+
+const { repoUrl } = Astro.props;
+---
+
+<header class="topbar" data-topbar-root>
+  <a class="brand-lockup" href="/">
+    <span class="brand-name">Irondefence</span>
+    <span class="brand-subtitle">Malware Analysis Lab</span>
+  </a>
+
+  <button
+    class="menu-toggle"
+    type="button"
+    aria-expanded="false"
+    aria-controls="mobile-drawer"
+    aria-label="Open navigation menu"
+    data-menu-toggle
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <nav class="topnav" aria-label="Primary">
+    <div class="topnav-links">
+      <a class="nav-link primary" href="/reports/">Reports</a>
+    </div>
+
+    <a class="nav-link nav-link-github" href={repoUrl} target="_blank" rel="noreferrer">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+        <path
+          d="M12 2C6.477 2 2 6.589 2 12.248c0 4.527 2.865 8.368 6.839 9.724.5.096.682-.221.682-.493 0-.243-.009-.888-.014-1.742-2.782.615-3.369-1.384-3.369-1.384-.455-1.177-1.11-1.491-1.11-1.491-.908-.635.069-.622.069-.622 1.004.072 1.532 1.053 1.532 1.053.892 1.562 2.341 1.111 2.91.849.091-.667.349-1.112.635-1.367-2.221-.258-4.555-1.138-4.555-5.065 0-1.119.39-2.034 1.029-2.751-.103-.259-.446-1.301.098-2.712 0 0 .84-.276 2.75 1.05A9.326 9.326 0 0 1 12 6.836a9.28 9.28 0 0 1 2.504.349c1.909-1.326 2.747-1.05 2.747-1.05.546 1.411.203 2.453.1 2.712.64.717 1.027 1.632 1.027 2.751 0 3.938-2.338 4.804-4.566 5.057.359.319.679.949.679 1.913 0 1.381-.012 2.495-.012 2.834 0 .274.18.593.688.492A10.252 10.252 0 0 0 22 12.248C22 6.589 17.523 2 12 2Z"
+        />
+      </svg>
+      <span class="nav-link-label">GitHub</span>
+    </a>
+  </nav>
+
+  <div class="mobile-nav" data-mobile-nav>
+    <button class="mobile-overlay" type="button" aria-label="Close navigation menu" data-menu-close></button>
+
+    <aside class="mobile-drawer" id="mobile-drawer" aria-label="Mobile navigation" tabindex="-1">
+      <div class="mobile-drawer-head">
+        <div class="mobile-brand">
+          <span class="brand-name">Irondefence</span>
+          <span class="brand-subtitle">Malware Analysis Lab</span>
+        </div>
+
+        <button class="mobile-close" type="button" aria-label="Close navigation menu" data-menu-close>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+
+      <div class="mobile-drawer-body">
+        <a class="mobile-link primary" href="/reports/" data-menu-link>Reports</a>
+        <a class="mobile-link" href={repoUrl} target="_blank" rel="noreferrer" data-menu-link>
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+            <path
+              d="M12 2C6.477 2 2 6.589 2 12.248c0 4.527 2.865 8.368 6.839 9.724.5.096.682-.221.682-.493 0-.243-.009-.888-.014-1.742-2.782.615-3.369-1.384-3.369-1.384-.455-1.177-1.11-1.491-1.11-1.491-.908-.635.069-.622.069-.622 1.004.072 1.532 1.053 1.532 1.053.892 1.562 2.341 1.111 2.91.849.091-.667.349-1.112.635-1.367-2.221-.258-4.555-1.138-4.555-5.065 0-1.119.39-2.034 1.029-2.751-.103-.259-.446-1.301.098-2.712 0 0 .84-.276 2.75 1.05A9.326 9.326 0 0 1 12 6.836a9.28 9.28 0 0 1 2.504.349c1.909-1.326 2.747-1.05 2.747-1.05.546 1.411.203 2.453.1 2.712.64.717 1.027 1.632 1.027 2.751 0 3.938-2.338 4.804-4.566 5.057.359.319.679.949.679 1.913 0 1.381-.012 2.495-.012 2.834 0 .274.18.593.688.492A10.252 10.252 0 0 0 22 12.248C22 6.589 17.523 2 12 2Z"
+            />
+          </svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </aside>
+  </div>
+</header>
+
+<script is:inline>
+  const header = document.querySelector("[data-topbar-root]");
+
+  if (header) {
+    const body = document.body;
+    const toggle = header.querySelector("[data-menu-toggle]");
+    const drawer = header.querySelector("#mobile-drawer");
+    const closeButtons = header.querySelectorAll("[data-menu-close], [data-menu-link]");
+
+    const setMenu = (open) => {
+      header.dataset.menuOpen = open ? "true" : "false";
+      body.classList.toggle("mobile-menu-open", open);
+
+      if (toggle instanceof HTMLButtonElement) {
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        toggle.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
+      }
+
+      if (open && drawer instanceof HTMLElement) {
+        drawer.focus();
+      }
+    };
+
+    if (toggle instanceof HTMLButtonElement) {
+      toggle.addEventListener("click", () => {
+        setMenu(header.dataset.menuOpen !== "true");
+      });
+    }
+
+    for (const button of closeButtons) {
+      button.addEventListener("click", () => setMenu(false));
+    }
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        setMenu(false);
+      }
+    });
+
+    const media = window.matchMedia("(min-width: 761px)");
+    media.addEventListener("change", (event) => {
+      if (event.matches) {
+        setMenu(false);
+      }
+    });
+  }
+</script>
