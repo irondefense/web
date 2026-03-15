@@ -1,0 +1,43 @@
+---
+import { getCollection } from "astro:content";
+import ReportDetailPage from "../../../components/reports/ReportDetailPage.astro";
+import { locales, type Locale } from "../../../lib/i18n";
+import {
+  buildReportGroups,
+  getReportForLocale,
+  type ReportEntry,
+} from "../../../lib/reports";
+import { getLocalizedSegment } from "../../../lib/routes";
+import { siteConfig } from "../../../lib/site";
+
+export async function getStaticPaths() {
+  const reportGroups = buildReportGroups(
+    await getCollection("reports", ({ data }) => !data.draft),
+  );
+
+  return locales.flatMap((locale: Locale) =>
+    reportGroups.map((group) => ({
+      params: {
+        locale,
+        reportsSegment: getLocalizedSegment("reports", locale),
+        reportId: group.reportId,
+      },
+      props: {
+        locale,
+        report: getReportForLocale(group, locale),
+      },
+    })),
+  );
+}
+
+const { locale, report } = Astro.props as {
+  locale: Locale;
+  report: ReportEntry;
+};
+---
+
+<ReportDetailPage
+  locale={locale}
+  repoUrl={siteConfig.repoUrl}
+  report={report}
+/>

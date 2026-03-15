@@ -1,55 +1,44 @@
+---
+import type { Locale } from "../../lib/i18n";
+import { ui } from "../../lib/i18n";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = ui[locale].home;
+---
+
 <section class="section" aria-labelledby="about-title">
   <div class="section-head">
-    <p class="section-index">01 / About</p>
-    <h2 class="section-title" id="about-title">Analyst Profile</h2>
+    <p class="section-index">{t.aboutIndex}</p>
+    <h2 class="section-title" id="about-title">{t.aboutTitle}</h2>
   </div>
 
   <div class="about-layout">
     <div class="about-copy">
-      <p>
-        Security researcher focused on understanding the adversary: how malware operates, how
-        campaigns are structured, and how threat actors evolve their tradecraft over time.
-      </p>
-      <p>
-        Every report published here is the result of hands-on reverse engineering, sandbox
-        analysis, and OSINT research. Technical findings are translated into actionable
-        intelligence.
-      </p>
-      <p class="raw-line">// No vendor hype. No marketing fluff. Just raw analysis.</p>
+      <p>{t.aboutP1}</p>
+      <p>{t.aboutP2}</p>
+      <p class="raw-line">{t.aboutRaw}</p>
 
       <div class="stats">
-        <div class="stat">
-          <strong>Malware</strong>
-          <span>Samples analyzed</span>
-        </div>
-        <div class="stat">
-          <strong>IOC</strong>
-          <span>Sets published</span>
-        </div>
-        <div class="stat">
-          <strong>YARA</strong>
-          <span>Rules written</span>
-        </div>
+        {t.stats.map((item) => (
+          <div class="stat">
+            <strong>{item.title}</strong>
+            <span>{item.label}</span>
+          </div>
+        ))}
       </div>
     </div>
 
     <div class="capabilities">
-      <article class="capability">
-        <h3>Malware Analysis</h3>
-        <p>Static & dynamic analysis of PE, scripts, and fileless threats.</p>
-      </article>
-      <article class="capability">
-        <h3>Threat Hunting</h3>
-        <p>Proactive hunting across telemetry using ATT&CK framework TTPs.</p>
-      </article>
-      <article class="capability">
-        <h3>CTI Production</h3>
-        <p>Structured threat reports, IOC extraction, and actor profiling.</p>
-      </article>
-      <article class="capability">
-        <h3>OSINT Research</h3>
-        <p>Open-source intelligence gathering and infrastructure tracking.</p>
-      </article>
+      {t.capabilities.map((item) => (
+        <article class="capability">
+          <h3>{item.title}</h3>
+          <p>{item.description}</p>
+        </article>
+      ))}
     </div>
   </div>
 </section>

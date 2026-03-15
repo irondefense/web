@@ -1,4 +1,9 @@
 ---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "../../lib/i18n";
+import { ui } from "../../lib/i18n";
+import { getLocalizedPath } from "../../lib/routes";
+
 interface PreviewReport {
   href: string;
   title: string;
@@ -10,25 +15,25 @@ interface PreviewReport {
 
 interface Props {
   previewReports: PreviewReport[];
+  locale: Locale;
 }
 
-const { previewReports } = Astro.props;
+const { previewReports, locale } = Astro.props;
+const t = ui[locale].home;
+const archiveHref = getLocalizedPath(locale, "reports");
 ---
 
 <section class="section" aria-labelledby="reports-title">
   <div class="reports-head">
     <div class="section-head" style="margin-bottom: 0;">
-      <p class="section-index">02 / Reports</p>
-      <h2 class="section-title" id="reports-title">Threat Intelligence</h2>
+      <p class="section-index">{t.reportsIndex}</p>
+      <h2 class="section-title" id="reports-title">{t.reportsTitle}</h2>
     </div>
 
-    <a class="reports-link" href="/reports/">All reports ></a>
+    <a class="reports-link" href={archiveHref}>{t.allReports}</a>
   </div>
 
-  <p class="reports-copy">
-    Each report documents a real-world malware sample or campaign from initial triage through
-    full reverse engineering. IOCs, YARA rules and ATT&CK TTPs are included.
-  </p>
+  <p class="reports-copy">{t.reportsIntro}</p>
 
   <div class="report-grid">
     {
@@ -41,21 +46,16 @@ const { previewReports } = Astro.props;
 
           <h3 class="report-title">{report.title}</h3>
           <p class="report-desc">{report.description}</p>
-          <span class="report-read">Read report ></span>
+          <span class="report-read">{t.readReport}</span>
         </a>
       ))
     }
   </div>
 
   <div class="reports-cta">
-    <a class="button" href="/reports/">
-      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M6 3.75h8.5L19 8.25V19.5A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5V5.5A1.5 1.5 0 0 1 6.5 4Z"></path>
-        <path d="M14 3.75V8.5h4.75"></path>
-        <path d="M8 12.5h8"></path>
-        <path d="M8 16h5"></path>
-      </svg>
-      Access all reports
+    <a class="button" href={archiveHref}>
+      <Icon name="lucide:file-text" class="button-icon" />
+      {t.accessAll}
     </a>
   </div>
 </section>

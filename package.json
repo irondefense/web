@@ -13,5 +13,10 @@
     "@astrojs/check": "latest",
     "astro": "latest",
     "typescript": "latest"
+  },
+  "dependencies": {
+    "@iconify-json/lucide": "^1.2.98",
+    "astro-icon": "^1.1.5",
+    "shiki": "^4.0.2"
   }
 }

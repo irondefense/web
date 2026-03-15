@@ -43,6 +43,29 @@
         "type": "string"
       }
     },
+    "yaraRules": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    },
     "$schema": {
       "type": "string"
     }
@@ -54,7 +77,8 @@
     "date",
     "draft",
     "tlp",
-    "tags"
+    "tags",
+    "yaraRules"
   ],
   "additionalProperties": false
 }

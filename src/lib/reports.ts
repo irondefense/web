@@ -1,4 +1,6 @@
 import type { CollectionEntry } from "astro:content";
+import type { Locale } from "./i18n";
+import { getLocalizedReportPath } from "./routes";
 
 export type ReportEntry = CollectionEntry<"reports">;
 export type ReportLang = ReportEntry["data"]["lang"];
@@ -26,7 +28,7 @@ export function buildReportGroups(entries: ReportEntry[]) {
   return Array.from(groups.entries())
     .map(([reportId, groupedEntries]): ReportGroup => {
       const sortedEntries = [...groupedEntries].sort(
-        (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+        (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
       );
 
       const byLang: Partial<Record<ReportLang, ReportEntry>> = {};
@@ -42,9 +44,15 @@ export function buildReportGroups(entries: ReportEntry[]) {
         byLang,
       };
     })
-    .sort((a, b) => b.primary.data.date.valueOf() - a.primary.data.date.valueOf());
+    .sort(
+      (a, b) => b.primary.data.date.valueOf() - a.primary.data.date.valueOf(),
+    );
 }
 
 export function getReportHref(reportId: string, lang: ReportLang = "en") {
-  return lang === "pl" ? `/reports/${reportId}/pl/` : `/reports/${reportId}/`;
+  return getLocalizedReportPath(reportId, lang);
+}
+
+export function getReportForLocale(group: ReportGroup, locale: Locale) {
+  return group.byLang[locale] ?? group.byLang.en ?? group.primary;
 }

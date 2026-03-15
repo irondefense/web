@@ -1,0 +1,16 @@
+---
+import HomePage from "../../components/home/HomePage.astro";
+import { locales, type Locale } from "../../lib/i18n";
+import { siteConfig } from "../../lib/site";
+
+export async function getStaticPaths() {
+  return locales.map((locale) => ({
+    params: { locale },
+    props: { locale },
+  }));
+}
+
+const { locale } = Astro.props as { locale: Locale };
+---
+
+<HomePage locale={locale} repoUrl={siteConfig.repoUrl} />

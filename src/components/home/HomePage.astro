@@ -1,0 +1,79 @@
+---
+import { getCollection } from "astro:content";
+import type { Locale } from "../../lib/i18n";
+import { ui } from "../../lib/i18n";
+import { buildReportGroups, getReportForLocale, getReportHref } from "../../lib/reports";
+import { getLocalizedPath } from "../../lib/routes";
+import AboutSection from "./AboutSection.astro";
+import HeroSection from "./HeroSection.astro";
+import ReportsPreviewSection from "./ReportsPreviewSection.astro";
+import TopNav from "./TopNav.astro";
+import LandingLayout from "../../layouts/LandingLayout.astro";
+
+type PreviewReport = {
+  href: string;
+  title: string;
+  description: string;
+  tag: string;
+  severity: string;
+  tone: "critical" | "high" | "medium";
+};
+
+interface Props {
+  locale: Locale;
+  repoUrl: string;
+}
+
+const { locale, repoUrl } = Astro.props;
+const t = ui[locale];
+const reportGroups = buildReportGroups(await getCollection("reports", ({ data }) => !data.draft));
+
+const reports = reportGroups.slice(0, 3).map((group, index): PreviewReport => {
+  const report = getReportForLocale(group, locale);
+  const theme = t.home.previewThemes[index] ?? t.home.previewThemes[t.home.previewThemes.length - 1]!;
+
+  return {
+    href: getReportHref(group.reportId, locale),
+    title: report.data.title,
+    description:
+      report.data.description ??
+      "Technical report covering execution flow, behavioral artifacts and detection-relevant observations.",
+    ...theme,
+  };
+});
+
+const previewReports = [...reports];
+
+for (const fallback of t.home.fallbackReports) {
+  if (previewReports.length >= 3) break;
+
+  previewReports.push({
+    href: getLocalizedPath(locale, "reports"),
+    title: fallback.title,
+    description: fallback.description,
+    tag: fallback.tag,
+    severity: fallback.severity,
+    tone: fallback.tone,
+  });
+}
+
+---
+
+<LandingLayout
+  title="MalReports | Malware Analysis Lab"
+  description={locale === "en"
+    ? "Technical malware analysis and cyber threat intelligence reports."
+    : "Techniczne raporty malware analysis i cyber threat intelligence."}
+  locale={locale}
+>
+  <TopNav repoUrl={repoUrl} locale={locale} />
+  <HeroSection repoUrl={repoUrl} locale={locale} />
+  <main>
+    <AboutSection locale={locale} />
+    <ReportsPreviewSection previewReports={previewReports} locale={locale} />
+  </main>
+  <footer class="landing-footer">
+    <span>{t.home.footerLeft}</span>
+    <span>{t.home.footerRight}</span>
+  </footer>
+</LandingLayout>

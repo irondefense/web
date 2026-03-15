@@ -1,0 +1,337 @@
+---
+import { Icon } from "astro-icon/components";
+import { getCollection, render } from "astro:content";
+import { codeToHtml } from "shiki";
+import type { Locale } from "../../lib/i18n";
+import { ui } from "../../lib/i18n";
+import {
+  buildReportGroups,
+  getReportForLocale,
+  getReportHref,
+  type ReportEntry,
+} from "../../lib/reports";
+import { getLocalizedPath } from "../../lib/routes";
+import TopNav from "../home/TopNav.astro";
+import ReportLayout from "../../layouts/ReportLayout.astro";
+
+interface Props {
+  locale: Locale;
+  repoUrl: string;
+  report: ReportEntry;
+}
+
+const { locale, repoUrl, report } = Astro.props;
+const t = ui[locale].report;
+const { Content, headings } = await render(report);
+const relatedReports = buildReportGroups(
+  await getCollection("reports", ({ data }) => !data.draft),
+)
+  .filter((group) => group.reportId !== report.data.reportId)
+  .map((group) => {
+    const entry = getReportForLocale(group, locale);
+
+    return {
+      href: getReportHref(group.reportId, locale),
+      title: entry.data.title,
+    };
+  });
+
+const archiveHref = getLocalizedPath(locale, "reports");
+const languageLabel = report.data.lang === "en" ? t.english : t.polish;
+const yaraRules = report.data.yaraRules ?? [];
+const hasYaraRules = yaraRules.length > 0;
+const pageContents = headings.filter((heading) => heading.depth >= 2 && heading.depth <= 3);
+const highlightedYaraRules = await Promise.all(
+  yaraRules.map(async (rule) => ({
+    ...rule,
+    html: (await codeToHtml(rule.source, {
+      lang: "js",
+      theme: "github-dark",
+    }))
+      .replace('class="shiki ', 'class="astro-code shiki ')
+      .replace('data-language="js"', 'data-language="yara"')
+      .replace('data-language="javascript"', 'data-language="yara"'),
+  })),
+);
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString(locale === "pl" ? "pl-PL" : "en-GB");
+}
+---
+
+<ReportLayout
+  title={`${report.data.title} | MalReports`}
+  description={report.data.description}
+  repoUrl={repoUrl}
+  locale={locale}
+>
+  <Fragment slot="nav">
+    <TopNav repoUrl={repoUrl} locale={locale} />
+  </Fragment>
+
+  <style>
+    .info-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem;
+      margin-top: 0;
+    }
+
+    .info-card-tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.72rem;
+      padding: 0 0.58rem;
+      border: 1px solid rgba(158, 184, 201, 0.2);
+      color: var(--landing-accent);
+      background: rgba(158, 184, 201, 0.06);
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+  </style>
+
+  <div class="report-shell" data-report-shell data-active-tab="report">
+    <aside class="report-sidebar" data-report-sidebar>
+      <div class="report-sidebar-inner">
+        <div class="report-sidebar-head">
+          <p class="report-sidebar-title">{t.relatedReports}</p>
+          <button
+            class="report-sidebar-toggle"
+            type="button"
+            aria-expanded="true"
+            aria-controls="report-sidebar-panel"
+            aria-label={t.toggleSidebar}
+            data-report-sidebar-toggle
+          >
+            <Icon name="lucide:panel-left-open" class="report-sidebar-toggle-icon icon-open" />
+            <Icon name="lucide:panel-left-close" class="report-sidebar-toggle-icon icon-close" />
+          </button>
+        </div>
+
+        <div class="report-sidebar-panel" id="report-sidebar-panel" data-report-sidebar-panel>
+          <nav class="report-sidebar-nav" aria-label={t.relatedReports}>
+            {relatedReports.map((item) => (
+              <a class="report-sidebar-link" href={item.href}>
+                <span class="report-sidebar-link-title">{item.title}</span>
+              </a>
+            ))}
+          </nav>
+        </div>
+      </div>
+    </aside>
+
+    <div class="report-stack">
+      <header class="report-hero">
+        <div class="report-topbar">
+          <a class="back-link" href={archiveHref}>
+            <Icon name="lucide:arrow-left" class="back-link-icon" aria-hidden="true" />
+            <span>{t.back}</span>
+          </a>
+        </div>
+
+        <p class="report-kicker">{t.dossier}</p>
+        <h1 class="report-title">{report.data.title}</h1>
+        {report.data.description && <p class="report-description">{report.data.description}</p>}
+
+        <div class="report-info-grid">
+          <div class="info-card">
+            <span class="info-card-icon" aria-hidden="true">
+              <Icon name="lucide:calendar-days" class="info-icon" />
+            </span>
+            <span class="info-card-label">{t.published}</span>
+            <span class="info-card-value">{formatDate(report.data.date)}</span>
+          </div>
+
+          <div class="info-card">
+            <span class="info-card-icon" aria-hidden="true">
+              <Icon name="lucide:braces" class="info-icon" />
+            </span>
+            <span class="info-card-label">{t.reportId}</span>
+            <span class="info-card-value">{report.data.reportId}</span>
+          </div>
+
+          <div class="info-card">
+            <span class="info-card-icon" aria-hidden="true">
+              <Icon name="lucide:languages" class="info-icon" />
+            </span>
+            <span class="info-card-label">{t.language}</span>
+            <span class="info-card-value">{languageLabel}</span>
+          </div>
+
+          <div class="info-card">
+            <span class="info-card-icon" aria-hidden="true">
+              <Icon name="lucide:tags" class="info-icon" />
+            </span>
+            <span class="info-card-label">{t.tags}</span>
+            <div class="info-card-tags">
+              {(report.data.tags.length > 0
+                ? report.data.tags
+                : [locale === "pl" ? "analiza malware" : "malware analysis"]).map((tag) => (
+                <span class="info-card-tag">{tag}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {hasYaraRules ? (
+        <section class="report-tabs-shell" data-report-tabs>
+          <div class="report-tabs-nav" role="tablist" aria-label="Report content tabs">
+            <button
+              class="report-tab active"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="report-panel"
+              id="report-tab"
+              data-tab-trigger="report"
+            >
+              {t.contentTab}
+            </button>
+            <button
+              class="report-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="yara-panel"
+              id="yara-tab"
+              data-tab-trigger="yara"
+            >
+              {t.yaraTab}
+            </button>
+          </div>
+
+          <section
+            class="tab-panel active"
+            id="report-panel"
+            role="tabpanel"
+            aria-labelledby="report-tab"
+            data-tab-panel="report"
+          >
+            <article class="report-prose">
+              <Content />
+            </article>
+          </section>
+
+          <section
+            class="tab-panel"
+            id="yara-panel"
+            role="tabpanel"
+            aria-labelledby="yara-tab"
+            data-tab-panel="yara"
+            hidden
+          >
+            <div class="report-yara">
+              <div class="yara-head">
+                <h2>{t.yaraTitle}</h2>
+              </div>
+
+              {highlightedYaraRules.length > 0 ? (
+                <div class="yara-grid">
+                  {highlightedYaraRules.map((rule) => (
+                    <article class="yara-rule">
+                      <div class="yara-rule-head">
+                        <h3>{rule.name}</h3>
+                        {rule.description && <p>{rule.description}</p>}
+                      </div>
+
+                      <Fragment set:html={rule.html} />
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p>{t.yaraEmpty}</p>
+              )}
+            </div>
+          </section>
+        </section>
+      ) : (
+        <article class="report-prose">
+          <Content />
+        </article>
+      )}
+    </div>
+
+    {pageContents.length > 0 && (
+      <aside class="report-toc" aria-label={t.pageContents}>
+        <div class="report-toc-inner">
+          <p class="report-toc-title">{t.pageContents}</p>
+          <nav class="report-toc-nav">
+            <span class="report-toc-rail" aria-hidden="true">
+              <span class="report-toc-indicator" data-toc-indicator></span>
+            </span>
+            {pageContents.map((heading) => (
+              <a
+                class:list={[
+                  "report-toc-link",
+                  heading.depth === 3 && "depth-3",
+                ]}
+                href={`#${heading.slug}`}
+                data-toc-link={heading.slug}
+              >
+                {heading.text}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </aside>
+    )}
+  </div>
+
+  {hasYaraRules && (
+    <script is:inline>
+      const tabsRoot = document.querySelector("[data-report-tabs]");
+      const reportShell = document.querySelector("[data-report-shell]");
+
+      if (tabsRoot instanceof HTMLElement) {
+        const triggers = tabsRoot.querySelectorAll("[data-tab-trigger]");
+        const panels = tabsRoot.querySelectorAll("[data-tab-panel]");
+
+        const setActiveTab = (tab) => {
+          tabsRoot.dataset.activeTab = tab;
+          if (reportShell instanceof HTMLElement) {
+            reportShell.dataset.activeTab = tab;
+          }
+
+          for (const trigger of triggers) {
+            const active = trigger.getAttribute("data-tab-trigger") === tab;
+            trigger.classList.toggle("active", active);
+            trigger.setAttribute("aria-selected", active ? "true" : "false");
+          }
+
+          for (const panel of panels) {
+            const active = panel.getAttribute("data-tab-panel") === tab;
+            panel.toggleAttribute("hidden", !active);
+            panel.classList.toggle("active", active);
+          }
+        };
+
+        for (const trigger of triggers) {
+          trigger.addEventListener("click", () => {
+            const tab = trigger.getAttribute("data-tab-trigger");
+            if (tab) {
+              setActiveTab(tab);
+            }
+          });
+        }
+      }
+    </script>
+  )}
+
+  <script is:inline>
+    const reportSidebar = document.querySelector("[data-report-sidebar]");
+    const reportSidebarToggle = document.querySelector("[data-report-sidebar-toggle]");
+
+    if (reportSidebar instanceof HTMLElement && reportSidebarToggle instanceof HTMLButtonElement) {
+      reportSidebarToggle.addEventListener("click", () => {
+        const collapsed = reportSidebar.dataset.collapsed === "true";
+        reportSidebar.dataset.collapsed = collapsed ? "false" : "true";
+        reportSidebarToggle.setAttribute("aria-expanded", collapsed ? "true" : "false");
+      });
+    }
+  </script>
+</ReportLayout>

@@ -1,4 +1,5 @@
 ---
+import { Icon } from "astro-icon/components";
 import TopNav from "../components/home/TopNav.astro";
 import LandingLayout from "./LandingLayout.astro";
 
@@ -6,24 +7,169 @@ interface Props {
   title: string;
   description?: string;
   repoUrl: string;
+  locale?: "en" | "pl";
 }
 
-const { title, description, repoUrl } = Astro.props;
+const { title, description, repoUrl, locale = "en" } = Astro.props;
+const copyLabel = locale === "pl" ? "Kopiuj" : "Copy";
+const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
 ---
 
-<LandingLayout title={title} description={description}>
-  <TopNav repoUrl={repoUrl} />
+<LandingLayout title={title} description={description} locale={locale}>
+  <slot name="nav">
+    <TopNav repoUrl={repoUrl} locale={locale} />
+  </slot>
 
   <style is:global>
+    :root {
+      --report-content-width: 68rem;
+      --report-sticky-offset: 6.75rem;
+      --report-anchor-offset: 7.4rem;
+    }
+
+    .landing-page {
+      width: 100%;
+      max-width: none;
+    }
+
     .report-page {
+      width: min(1520px, calc(100vw - 48px));
+      margin: 0 auto;
       padding: 3rem 0 5.5rem;
+    }
+
+    .report-shell {
+      display: grid;
+      grid-template-columns: 15.5rem auto 15.5rem;
+      gap: 2rem;
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 auto;
+      align-items: start;
+      justify-content: center;
+    }
+
+    .report-stack {
+      grid-column: 2;
+      justify-self: center;
+      min-width: 0;
+      width: min(100%, var(--report-content-width));
+    }
+
+    .report-sidebar,
+    .report-toc {
+      min-width: 0;
+      align-self: start;
+    }
+
+    .report-sidebar {
+      grid-column: 1;
+      position: sticky;
+      top: var(--report-sticky-offset);
+      justify-self: stretch;
+      width: 15.5rem;
+      max-width: 100%;
+    }
+
+    .report-sidebar-inner {
+      display: grid;
+      justify-items: start;
+      gap: 0.9rem;
+    }
+
+    .report-sidebar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 0.8rem;
+    }
+
+    .report-sidebar-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.35rem;
+      height: 2.35rem;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--landing-accent);
+      cursor: pointer;
+    }
+
+    .report-sidebar-toggle-icon {
+      width: 1rem;
+      height: 1rem;
+      color: currentColor;
+    }
+
+    .report-sidebar-toggle .icon-close {
+      display: none;
+    }
+
+    .report-sidebar[data-collapsed="true"] .report-sidebar-toggle .icon-open {
+      display: none;
+    }
+
+    .report-sidebar[data-collapsed="true"] .report-sidebar-toggle .icon-close {
+      display: block;
+    }
+
+    .report-sidebar-panel {
+      display: grid;
+      gap: 0.35rem;
+      width: 100%;
+      transition:
+        opacity 180ms ease,
+        transform 180ms ease;
+    }
+
+    .report-sidebar[data-collapsed="true"] .report-sidebar-panel {
+      opacity: 0;
+      transform: translateX(-8px);
+      pointer-events: none;
+      height: 0;
+      overflow: hidden;
+    }
+
+    .report-sidebar-title {
+      margin: 0;
+      color: var(--landing-accent);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .report-sidebar-nav {
+      display: grid;
+      gap: 0.28rem;
+      width: 100%;
+    }
+
+    .report-sidebar-link {
+      display: block;
+      padding: 0.22rem 0;
+      transition: color 140ms ease;
+    }
+
+    .report-sidebar-link:hover {
+      color: var(--landing-text-strong);
+    }
+
+    .report-sidebar-link-title {
+      color: #8f9ca8;
+      font-size: 0.92rem;
+      line-height: 1.45;
     }
 
     .report-hero {
       display: grid;
       gap: 1.8rem;
-      max-width: 70rem;
-      margin: 0 auto;
+      max-width: none;
+      margin: 0;
       padding: clamp(1.6rem, 3vw, 2.6rem);
       border: 1px solid rgba(158, 184, 201, 0.12);
       background:
@@ -37,7 +183,6 @@ const { title, description, repoUrl } = Astro.props;
     .report-kicker {
       display: inline-flex;
       align-items: center;
-      gap: 0.9rem;
       margin: 0;
       color: var(--landing-accent);
       font-family: var(--font-mono);
@@ -46,18 +191,11 @@ const { title, description, repoUrl } = Astro.props;
       text-transform: uppercase;
     }
 
-    .report-kicker::before {
-      content: "";
-      width: 2.4rem;
-      height: 2px;
-      background: var(--landing-accent);
-    }
-
     .report-title {
       margin: 0;
       color: var(--landing-text-strong);
       max-width: 16ch;
-      font-family: var(--font-body);
+      font-family: var(--font-display);
       font-size: clamp(2.5rem, 5.8vw, 4.5rem);
       font-weight: 800;
       line-height: 1;
@@ -77,15 +215,16 @@ const { title, description, repoUrl } = Astro.props;
 
     .report-topbar {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
       gap: 1rem;
       padding-bottom: 0.4rem;
       border-bottom: 1px solid rgba(158, 184, 201, 0.12);
     }
 
     .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.58rem;
       color: var(--landing-accent);
       font-family: var(--font-mono);
       font-size: 0.92rem;
@@ -94,65 +233,29 @@ const { title, description, repoUrl } = Astro.props;
       text-transform: uppercase;
     }
 
-    .lang-switch {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      padding: 0.3rem;
-      border: 1px solid rgba(158, 184, 201, 0.1);
-      background: rgba(255, 255, 255, 0.035);
-    }
-
-    .lang-label {
-      color: #6f7e8c;
-      font-family: var(--font-mono);
-      font-size: 0.82rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    .lang-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 2.2rem;
-      padding: 0 0.85rem;
-      border: 0;
-      background: transparent;
-      color: var(--landing-text-strong);
-      font-family: var(--font-mono);
-      font-size: 0.86rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .lang-link.active {
-      color: var(--landing-accent);
-      background: rgba(158, 184, 201, 0.14);
-      box-shadow: inset 0 0 0 1px rgba(158, 184, 201, 0.16);
-    }
-
-    .lang-link.disabled {
-      opacity: 0.45;
-      pointer-events: none;
+    .back-link-icon {
+      width: 0.95rem;
+      height: 0.95rem;
+      color: currentColor;
+      flex: 0 0 auto;
     }
 
     .report-info-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 1rem;
-      padding-top: 0.3rem;
+      grid-template-columns: 1fr;
+      gap: 0.95rem;
+      padding-top: 0.55rem;
+      width: min(100%, 54rem);
     }
 
     .info-card {
       display: grid;
-      grid-template-columns: 2.9rem minmax(0, 1fr);
-      gap: 0.95rem;
-      align-items: center;
-      padding: 0.55rem 0;
+      grid-template-columns: 0.5rem 5rem minmax(0, 1fr);
+      column-gap: 1.1rem;
+      align-items: baseline;
+      padding: 0.14rem 0;
       min-height: 100%;
+      width: 100%;
       border: 0;
       background: transparent;
     }
@@ -161,44 +264,47 @@ const { title, description, repoUrl } = Astro.props;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 2.9rem;
-      height: 2.9rem;
-      border: 1px solid rgba(158, 184, 201, 0.1);
-      background: rgba(255, 255, 255, 0.015);
+      width: 1.1rem;
+      height: 1.1rem;
       color: var(--landing-accent);
+      transform: translateY(0.08rem);
     }
 
-    .info-card-icon svg {
-      width: 1.08rem;
-      height: 1.08rem;
-    }
-
-    .info-card-copy {
-      min-width: 0;
-      display: grid;
-      gap: 0.2rem;
+    .info-icon {
+      width: 0.95rem;
+      height: 0.95rem;
+      color: currentColor;
     }
 
     .info-card-label {
-      display: block;
+      display: inline-flex;
+      align-items: baseline;
       color: #6f7e8c;
       font-family: var(--font-mono);
       font-size: 0.76rem;
+      font-weight: 800;
       letter-spacing: 0.14em;
       text-transform: uppercase;
+      white-space: nowrap;
+      justify-self: start;
+      line-height: 1.5;
     }
 
     .info-card-value {
-      display: block;
+      display: inline-flex;
+      align-items: baseline;
       color: var(--landing-text-strong);
       font-size: 1.02rem;
       line-height: 1.5;
+      min-width: 0;
+      justify-self: start;
+      flex-wrap: wrap;
     }
 
     .report-prose {
       position: relative;
-      max-width: 62rem;
-      margin: 2.3rem auto 0;
+      max-width: none;
+      margin: 2.3rem 0 0;
       padding: clamp(2rem, 4vw, 3.4rem);
       border: 1px solid rgba(158, 184, 201, 0.12);
       background:
@@ -209,180 +315,479 @@ const { title, description, repoUrl } = Astro.props;
         inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
 
-    .report-prose::before {
-      content: "";
-      position: absolute;
-      top: 1.1rem;
-      left: 1.25rem;
-      width: 3.3rem;
-      height: 3px;
-      border-radius: 999px;
-      background: var(--landing-accent);
+    .report-tabs-shell {
+      max-width: none;
+      margin: 2.3rem 0 0;
     }
 
-    .report-prose :global(h1),
-    .report-prose :global(h2),
-    .report-prose :global(h3),
-    .report-prose :global(h4) {
+    .report-toc {
+      grid-column: 3;
+      position: sticky;
+      top: var(--report-sticky-offset);
+      align-self: start;
+      justify-self: stretch;
+      width: 15.5rem;
+      max-width: 100%;
+    }
+
+    .report-toc-inner {
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    .report-toc-title {
+      margin: 0;
+      color: var(--landing-accent);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .report-toc-nav {
+      position: relative;
+      display: grid;
+      gap: 0.45rem;
+      padding-left: 1rem;
+    }
+
+    .report-toc-rail {
+      position: absolute;
+      top: 0.08rem;
+      bottom: 0.08rem;
+      left: 0;
+      width: 2px;
+      background: rgba(158, 184, 201, 0.12);
+      overflow: hidden;
+    }
+
+    .report-toc-indicator {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      min-height: 1.15rem;
+      background: linear-gradient(180deg, rgba(199, 221, 238, 0.24), rgba(158, 184, 201, 0.9));
+      transition:
+        transform 220ms ease,
+        height 220ms ease,
+        opacity 180ms ease;
+    }
+
+    .report-toc-link {
+      display: block;
+      color: #7d8b98;
+      font-size: 0.92rem;
+      line-height: 1.45;
+      font-weight: 500;
+      scroll-margin-top: var(--report-anchor-offset);
+    }
+
+    .report-toc-link:hover {
       color: var(--landing-text-strong);
-      font-family: var(--font-body);
+    }
+
+    .report-toc-link.active {
+      color: #9eacb9;
+      font-weight: 700;
+    }
+
+    .report-toc-link.current {
+      color: var(--landing-accent);
+      font-weight: 700;
+    }
+
+    .report-toc-link.depth-3 {
+      padding-left: 0.85rem;
+      font-size: 0.86rem;
+    }
+
+    .report-tabs-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .report-tab {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 2.35rem;
+      padding: 0 0.95rem;
+      border: 1px solid rgba(158, 184, 201, 0.14);
+      background: rgba(255, 255, 255, 0.02);
+      color: #8e9baa;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition:
+        color 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease;
+    }
+
+    .report-tab:hover {
+      color: var(--landing-text-strong);
+    }
+
+    .report-tab.active {
+      color: var(--landing-accent);
+      border-color: rgba(158, 184, 201, 0.24);
+      background: linear-gradient(180deg, rgba(158, 184, 201, 0.1), rgba(158, 184, 201, 0.05));
+    }
+
+    .tab-panel[hidden] {
+      display: none !important;
+    }
+
+    .report-tabs-shell .report-prose,
+    .report-tabs-shell .report-yara {
+      max-width: none;
+      margin: 0;
+    }
+
+    .report-shell[data-active-tab="yara"] .report-toc {
+      opacity: 0.34;
+      pointer-events: none;
+    }
+
+    .report-shell[data-active-tab="yara"] .report-toc-indicator {
+      opacity: 0;
+    }
+
+    .report-yara {
+      position: relative;
+      padding: clamp(2rem, 4vw, 3rem);
+      border: 1px solid rgba(158, 184, 201, 0.12);
+      background:
+        linear-gradient(180deg, rgba(43, 48, 56, 0.82), rgba(32, 36, 42, 0.82)),
+        rgba(34, 38, 44, 0.72);
+      box-shadow:
+        0 26px 60px rgba(0, 0, 0, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .yara-head {
+      margin-bottom: 1.6rem;
+    }
+
+    .yara-head h2 {
+      margin: 0;
+      color: var(--landing-text-strong);
+      font-size: clamp(1.5rem, 3.3vw, 2.1rem);
+      line-height: 1.05;
+    }
+
+    .yara-grid {
+      display: grid;
+      gap: 1.2rem;
+    }
+
+    .yara-rule {
+      display: grid;
+      gap: 0.9rem;
+      padding: 1.15rem;
+      border: 1px solid rgba(158, 184, 201, 0.1);
+      background: transparent;
+    }
+
+    .yara-rule-head {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .yara-rule-head h3 {
+      margin: 0;
+      color: var(--landing-text-strong);
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .yara-rule-head p {
+      margin: 0;
+      color: #a6b2bd;
+      font-size: 0.98rem;
+      line-height: 1.7;
+    }
+
+    .report-prose::before {
+      content: none;
+    }
+
+    .report-prose h1,
+    .report-prose h2,
+    .report-prose h3,
+    .report-prose h4 {
+      scroll-margin-top: var(--report-anchor-offset);
+      color: var(--landing-text-strong);
+      font-family: var(--font-display);
       font-weight: 800;
       line-height: 1.08;
       letter-spacing: -0.03em;
       margin: 2.8rem 0 1rem;
     }
 
-    .report-prose :global(h1:first-child),
-    .report-prose :global(h2:first-child) {
+    .report-prose h1:first-child,
+    .report-prose h2:first-child {
       margin-top: 0;
     }
 
-    .report-prose :global(h2) {
+    .report-prose h2 {
       padding-top: 1.35rem;
       border-top: 1px solid rgba(158, 184, 201, 0.12);
       font-size: clamp(1.9rem, 4vw, 2.45rem);
     }
 
-    .report-prose :global(h3) {
+    .report-prose h3 {
       font-size: clamp(1.35rem, 3vw, 1.75rem);
     }
 
-    .report-prose :global(p),
-    .report-prose :global(li) {
+    .report-prose p,
+    .report-prose li {
       color: #d1d9e0;
       font-size: 1.12rem;
       line-height: 2.06;
     }
 
-    .report-prose :global(p:first-of-type) {
+    .report-prose p:first-of-type {
       color: #e7edf2;
       font-size: 1.18rem;
       line-height: 2;
     }
 
-    .report-prose :global(p + p) {
+    .report-prose p + p {
       margin-top: 1.3rem;
     }
 
-    .report-prose :global(ul),
-    .report-prose :global(ol) {
+    .report-prose ul,
+    .report-prose ol {
       padding-left: 1.4rem;
     }
 
-    .report-prose :global(li + li) {
+    .report-prose li + li {
       margin-top: 0.75rem;
     }
 
-    .report-prose :global(blockquote) {
+    .report-prose blockquote {
       margin: 1.8rem 0;
       padding: 1.1rem 1.2rem 1.1rem 1.25rem;
       border-left: 3px solid var(--landing-accent);
       background: rgba(255, 255, 255, 0.04);
     }
 
-    .report-prose :global(hr) {
+    .report-prose hr {
       border: 0;
       border-top: 1px solid var(--landing-line);
       margin: 2rem 0;
     }
 
-    .report-prose :global(a) {
-      color: var(--landing-accent);
+    .report-prose a {
+      color: #c7ddee;
+      font-weight: 700;
       text-underline-offset: 0.16em;
+      text-decoration-thickness: 0.09em;
+      transition:
+        color 160ms ease,
+        text-decoration-color 160ms ease;
     }
 
-    .report-prose :global(table) {
+    .report-prose a:hover {
+      color: #eef6fd;
+    }
+
+    .report-prose figure {
+      display: grid;
+      gap: 0.32rem;
+      margin: 1.9rem 0 1.35rem;
+    }
+
+    .report-prose figure > img,
+    .report-prose figure > table {
+      margin: 0 auto;
+    }
+
+    .report-prose p:has(> img),
+    .report-prose p:has(> table),
+    .report-prose .media-block {
+      margin: 1.9rem 0 0.24rem;
+    }
+
+    .report-prose figcaption,
+    .report-prose caption,
+    .report-prose p:has(> img) + p:has(> em:only-child),
+    .report-prose p:has(> table) + p:has(> em:only-child),
+    .report-prose .media-caption {
+      margin: 0;
+      color: #98a8b6;
+      font-size: 0.92rem;
+      font-style: italic;
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    .report-prose p.media-caption {
+      margin-top: -0.9rem !important;
+      margin-bottom: 0.15rem;
+    }
+
+    .report-prose figcaption,
+    .report-prose caption {
+      padding-top: 0;
+    }
+
+    .report-prose p:has(> img) + p:has(> em:only-child) em,
+    .report-prose p:has(> table) + p:has(> em:only-child) em,
+    .report-prose .media-caption em {
+      font-style: italic;
+    }
+
+    .report-prose .media-caption strong {
+      font-size: 0.96rem;
+      font-style: inherit;
+      font-weight: 700;
+      color: #a9b9c6;
+    }
+
+    .report-prose table {
       width: 100%;
-      border-collapse: collapse;
       margin: 1.6rem 0;
-      font-size: 0.98rem;
-    }
-
-    .report-prose :global(th),
-    .report-prose :global(td) {
-      padding: 0.85rem 0.9rem;
-      border: 1px solid rgba(158, 184, 201, 0.12);
-      text-align: left;
-      vertical-align: top;
-    }
-
-    .report-prose :global(th) {
-      color: var(--landing-text-strong);
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .report-prose :global(code:not(pre code)) {
-      padding: 0.2rem 0.42rem;
+      border-collapse: separate;
+      border-spacing: 0;
       border: 1px solid rgba(158, 184, 201, 0.14);
-      border-radius: 0.3rem;
+      background: rgba(255, 255, 255, 0.025);
+      font-size: 0.98rem;
+      overflow: hidden;
+    }
+
+    .report-prose th,
+    .report-prose td {
+      padding: 0.95rem 1rem;
+      border-right: 1px solid rgba(158, 184, 201, 0.1);
+      border-bottom: 1px solid rgba(158, 184, 201, 0.1);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .report-prose th {
+      color: var(--landing-text-strong);
+      background: rgba(158, 184, 201, 0.08);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .report-prose tbody tr:nth-child(even) td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .report-prose tr > *:last-child {
+      border-right: 0;
+    }
+
+    .report-prose tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .report-prose code:not(pre code),
+    .report-yara code:not(pre code) {
+        padding: 0.05rem 0.42rem;
+      border: 1px solid rgba(158, 184, 201, 0.14);
       background: rgba(255, 255, 255, 0.04);
       font-family: var(--font-mono);
       font-size: 0.92em;
     }
 
-    .report-prose :global(pre) {
+    .report-prose pre,
+    .report-yara pre {
       position: relative;
-      margin: 1.9rem 0;
       overflow-x: auto;
+      max-width: 100%;
     }
 
-    .report-prose :global(pre.shiki) {
-      padding: 3.1rem 1.3rem 1.3rem !important;
-      border: 1px solid rgba(158, 184, 201, 0.1);
+    .code-frame {
+      margin: 1.9rem 0;
+      border: 1px solid rgba(158, 184, 201, 0.12);
       background:
-        linear-gradient(180deg, rgba(18, 22, 28, 0.98), rgba(15, 19, 24, 1)) !important;
+        linear-gradient(180deg, rgba(17, 20, 25, 0.98), rgba(12, 15, 20, 1));
       box-shadow:
-        0 20px 42px rgba(0, 0, 0, 0.2),
+        0 20px 42px rgba(0, 0, 0, 0.22),
         inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      outline: 1px solid rgba(158, 184, 201, 0.06);
+      outline-offset: 0;
+      overflow: hidden;
     }
 
-    .report-prose :global(pre.shiki)::before {
-      content: "Shiki snippet";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
+    .code-toolbar {
       display: flex;
       align-items: center;
-      height: 2.2rem;
-      padding: 0 1rem 0 3.9rem;
-      border-bottom: 1px solid rgba(158, 184, 201, 0.08);
-      color: #8ea5b5;
+      justify-content: space-between;
+      gap: 1rem;
+      min-height: 3rem;
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid rgba(158, 184, 201, 0.1);
+    }
+
+    .code-language {
+      color: var(--landing-text-strong);
       font-family: var(--font-mono);
-      font-size: 0.76rem;
-      font-weight: 700;
-      letter-spacing: 0.14em;
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
     }
 
-    .report-prose :global(pre.shiki)::after {
-      content: "";
-      position: absolute;
-      top: 0.78rem;
-      left: 1rem;
-      width: 2rem;
-      height: 0.55rem;
-      border-radius: 999px;
-      background:
-        radial-gradient(circle, #ff8c8c 0 42%, transparent 48%),
-        radial-gradient(circle, #f8b35f 0 42%, transparent 48%),
-        radial-gradient(circle, #9eb8c9 0 42%, transparent 48%);
-      background-size: 0.55rem 0.55rem;
-      background-position: 0 0, 0.72rem 0, 1.44rem 0;
-      background-repeat: no-repeat;
+    .snippet-copy {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: #8fa6b6;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 160ms ease;
     }
 
-    .report-prose :global(img) {
+    .snippet-copy:hover,
+    .snippet-copy.copied {
+      color: var(--landing-accent);
+    }
+
+    .snippet-copy-icon {
+      width: 0.98rem;
+      height: 0.98rem;
+      color: currentColor;
+    }
+
+    .report-prose pre.astro-code,
+    .report-yara pre.astro-code {
+      margin: 0;
+      padding: 1.65rem !important;
+      border: 0;
+      background: transparent !important;
+      box-shadow: none;
+      outline: 0;
+      max-width: 100%;
+    }
+
+    .report-prose img {
       display: block;
       margin: 1.8rem auto;
-      border: 1px solid rgba(158, 184, 201, 0.14);
       box-shadow: 0 16px 28px rgba(0, 0, 0, 0.16);
-    }
-
-    @media (max-width: 980px) {
-      .report-info-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
     }
 
     @media (max-width: 760px) {
@@ -390,18 +795,31 @@ const { title, description, repoUrl } = Astro.props;
         padding-top: 2rem;
       }
 
-      .report-topbar {
-        align-items: flex-start;
-        flex-direction: column;
+      .report-shell {
+        grid-template-columns: 1fr;
+        gap: 1.4rem;
       }
 
-      .report-info-grid {
-        grid-template-columns: 1fr;
+      .report-sidebar {
+        display: none;
+      }
+
+      .report-toc {
+        display: none;
       }
 
       .info-card {
-        padding: 0.15rem 0;
-        background: transparent;
+        grid-template-columns: 1.1rem 1fr;
+        column-gap: 0.8rem;
+        row-gap: 0.28rem;
+        align-items: start;
+        padding: 0.12rem 0;
+      }
+
+      .info-card-label,
+      .info-card-value,
+      .info-card-tags {
+        grid-column: 2;
       }
 
       .report-prose {
@@ -409,8 +827,20 @@ const { title, description, repoUrl } = Astro.props;
         padding: 1.7rem 1.05rem 2rem;
       }
 
-      .report-prose :global(p),
-      .report-prose :global(li) {
+      .report-tabs-nav {
+        flex-wrap: wrap;
+      }
+
+      .report-yara {
+        padding: 1.7rem 1.05rem 2rem;
+      }
+
+      .code-toolbar {
+        padding-inline: 0.85rem;
+      }
+
+      .report-prose p,
+      .report-prose li {
         font-size: 1.04rem;
         line-height: 1.98;
       }
@@ -420,4 +850,279 @@ const { title, description, repoUrl } = Astro.props;
   <main class="report-page">
     <slot />
   </main>
+
+  <span
+    class="snippet-copy-template"
+    hidden
+    data-copy-label={copyLabel}
+    data-copied-label={copiedLabel}
+  >
+    <Icon name="lucide:copy" class="snippet-copy-icon" />
+  </span>
+
+  <script is:inline>
+    const tocLinks = Array.from(document.querySelectorAll("[data-toc-link]"));
+    const tocIndicator = document.querySelector("[data-toc-indicator]");
+    const tocReportShell = document.querySelector("[data-report-shell]");
+    const observedHeadings = tocLinks
+      .map((link) => {
+        if (!(link instanceof HTMLAnchorElement)) {
+          return null;
+        }
+
+        const slug = link.dataset.tocLink;
+        if (!slug) {
+          return null;
+        }
+
+        const heading = document.getElementById(slug);
+        if (!heading) {
+          return null;
+        }
+
+        return { link, heading };
+      })
+      .filter(Boolean);
+
+    if (observedHeadings.length > 0) {
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const getActiveTab = () =>
+        tocReportShell?.getAttribute("data-active-tab") ?? "report";
+
+      const setActiveLinks = (visibleIds, currentId) => {
+        for (const item of observedHeadings) {
+          const isVisible = visibleIds.has(item.heading.id);
+          const isCurrent = item.heading.id === currentId;
+          item.link.classList.toggle("active", isVisible);
+          item.link.classList.toggle("current", isCurrent);
+        }
+      };
+
+      const hideIndicator = () => {
+        if (tocIndicator instanceof HTMLElement) {
+          tocIndicator.style.opacity = "0";
+        }
+      };
+
+      const setIndicatorRange = (startIndex, endIndex) => {
+        if (!(tocIndicator instanceof HTMLElement)) {
+          return;
+        }
+
+        if (getActiveTab() === "yara") {
+          hideIndicator();
+          return;
+        }
+
+        const start = observedHeadings[startIndex];
+        const end = observedHeadings[endIndex];
+        const nav = tocIndicator.closest(".report-toc-nav");
+
+        if (!start || !end || !(nav instanceof HTMLElement)) {
+          hideIndicator();
+          return;
+        }
+
+        const navRect = nav.getBoundingClientRect();
+        const startRect = start.link.getBoundingClientRect();
+        const endRect = end.link.getBoundingClientRect();
+        const top = startRect.top - navRect.top + 1;
+        const bottom = endRect.bottom - navRect.top - 1;
+
+        tocIndicator.style.opacity = "1";
+        tocIndicator.style.transform = `translateY(${top}px)`;
+        tocIndicator.style.height = `${Math.max(bottom - top, start.link.offsetHeight)}px`;
+      };
+
+      const getOffset = () => {
+        const raw = getComputedStyle(document.documentElement)
+          .getPropertyValue("--report-anchor-offset")
+          .trim();
+        const parsed = Number.parseFloat(raw);
+        return Number.isFinite(parsed) ? parsed * 16 : 118;
+      };
+
+      const updateActiveLink = () => {
+        if (getActiveTab() === "yara") {
+          hideIndicator();
+          return;
+        }
+
+        const offset = getOffset() + 20;
+        const viewportStart = window.scrollY + offset;
+        const viewportEnd = window.scrollY + window.innerHeight - 24;
+        let activeIndex = 0;
+        const visibleIndices = [];
+
+        for (const [index, item] of observedHeadings.entries()) {
+          const sectionStart = window.scrollY + item.heading.getBoundingClientRect().top;
+          const nextHeading = observedHeadings[index + 1]?.heading;
+          const sectionEnd = nextHeading
+            ? window.scrollY + nextHeading.getBoundingClientRect().top
+            : document.documentElement.scrollHeight;
+
+          if (sectionStart <= viewportStart) {
+            activeIndex = index;
+          }
+
+          if (sectionEnd > viewportStart && sectionStart < viewportEnd) {
+            visibleIndices.push(index);
+          }
+        }
+
+        const activeId = observedHeadings[activeIndex]?.heading.id;
+        const effectiveVisibleIndices = visibleIndices.length > 0 ? visibleIndices : [activeIndex];
+        const visibleIds = new Set(
+          effectiveVisibleIndices
+            .map((index) => observedHeadings[index]?.heading.id)
+            .filter(Boolean),
+        );
+
+        if (activeId) {
+          setActiveLinks(visibleIds, activeId);
+          setIndicatorRange(
+            effectiveVisibleIndices[0] ?? activeIndex,
+            effectiveVisibleIndices[effectiveVisibleIndices.length - 1] ?? activeIndex,
+          );
+        }
+      };
+
+      for (const item of observedHeadings) {
+        item.link.addEventListener("click", (event) => {
+          event.preventDefault();
+
+          const top = window.scrollY + item.heading.getBoundingClientRect().top - getOffset();
+
+          window.scrollTo({
+            top,
+            behavior: prefersReducedMotion ? "auto" : "smooth",
+          });
+
+          window.history.replaceState(null, "", `#${item.heading.id}`);
+        });
+      }
+
+      const onScroll = () => {
+        window.requestAnimationFrame(updateActiveLink);
+      };
+
+      updateActiveLink();
+      window.addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("resize", updateActiveLink);
+
+      if (tocReportShell instanceof HTMLElement) {
+        const observer = new MutationObserver(() => {
+          window.requestAnimationFrame(updateActiveLink);
+        });
+
+        observer.observe(tocReportShell, {
+          attributes: true,
+          attributeFilter: ["data-active-tab"],
+        });
+      }
+    } else if (tocIndicator instanceof HTMLElement) {
+      tocIndicator.style.opacity = "0";
+    }
+
+    const snippetTemplate = document.querySelector(".snippet-copy-template");
+    const proseRoots = document.querySelectorAll(".report-prose");
+
+    for (const root of proseRoots) {
+      const mediaBlocks = root.querySelectorAll("p > img, figure, table");
+      let figureIndex = 0;
+      let tableIndex = 0;
+
+      for (const media of mediaBlocks) {
+        const block =
+          media instanceof HTMLElement && media.tagName === "IMG"
+            ? media.closest("p")
+            : media;
+
+        if (!(block instanceof HTMLElement)) {
+          continue;
+        }
+
+        block.classList.add("media-block");
+
+        const next = block.nextElementSibling;
+
+        if (
+          next instanceof HTMLParagraphElement &&
+          next.childElementCount === 1 &&
+          ["EM", "STRONG"].includes(next.firstElementChild?.tagName ?? "")
+        ) {
+          next.classList.add("media-caption");
+          const label = media.tagName === "TABLE" ? "Table" : "Figure";
+          const index = media.tagName === "TABLE" ? ++tableIndex : ++figureIndex;
+          const sourceText = next.textContent?.trim();
+
+          if (sourceText && !/^(Figure|Table)\s+\d+\./.test(sourceText)) {
+            next.innerHTML = `<em><strong>${label} ${index}.</strong> ${sourceText}</em>`;
+          }
+        }
+      }
+    }
+
+    if (snippetTemplate instanceof HTMLElement) {
+      const copyText = snippetTemplate.dataset.copyLabel ?? "Copy";
+      const copiedText = snippetTemplate.dataset.copiedLabel ?? "Copied";
+      const copyIcon = snippetTemplate.innerHTML;
+      const codeBlocks = document.querySelectorAll(".report-tabs-shell pre.astro-code, .report-prose pre.astro-code");
+
+      for (const block of codeBlocks) {
+        if (!(block instanceof HTMLElement) || block.parentElement?.classList.contains("code-frame")) {
+          continue;
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-frame";
+
+        const toolbar = document.createElement("div");
+        toolbar.className = "code-toolbar";
+
+        const language = document.createElement("span");
+        language.className = "code-language";
+        const languageLabel =
+          block.closest(".yara-rule") instanceof HTMLElement
+            ? "YARA"
+            : (block.dataset.language ?? "text").toUpperCase();
+        language.textContent = languageLabel;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "snippet-copy";
+        button.setAttribute("aria-label", copyText);
+        button.innerHTML = `${copyIcon}<span>${copyText}</span>`;
+
+        button.addEventListener("click", async () => {
+          const content = block.querySelector("code")?.textContent ?? block.textContent ?? "";
+
+          try {
+            await navigator.clipboard.writeText(content);
+            button.classList.add("copied");
+            button.setAttribute("aria-label", copiedText);
+
+            const label = button.querySelector("span");
+            if (label) {
+              label.textContent = copiedText;
+            }
+
+            window.setTimeout(() => {
+              button.classList.remove("copied");
+              button.setAttribute("aria-label", copyText);
+              if (label) {
+                label.textContent = copyText;
+              }
+            }, 1400);
+          } catch (_error) {
+            button.setAttribute("aria-label", copyText);
+          }
+        });
+
+        toolbar.append(language, button);
+        block.parentNode?.insertBefore(wrapper, block);
+        wrapper.append(toolbar, block);
+      }
+    }
+  </script>
 </LandingLayout>

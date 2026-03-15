@@ -1,15 +1,27 @@
 ---
 import { getCollection } from "astro:content";
-import TopNav from "../../components/home/TopNav.astro";
+import type { Locale } from "../../lib/i18n";
+import { ui } from "../../lib/i18n";
+import { buildReportGroups, getReportForLocale, getReportHref } from "../../lib/reports";
+import TopNav from "../home/TopNav.astro";
 import LandingLayout from "../../layouts/LandingLayout.astro";
-import { buildReportGroups, getReportHref } from "../../lib/reports";
 
-const repoUrl = "https://github.com/irondefence/MalReports";
+interface Props {
+  locale: Locale;
+  repoUrl: string;
+}
+
+const { locale, repoUrl } = Astro.props;
+const t = ui[locale];
 const reports = buildReportGroups(await getCollection("reports", ({ data }) => !data.draft));
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString(locale === "pl" ? "pl-PL" : "en-GB");
+}
 ---
 
-<LandingLayout title="Reports | MalReports" description="Lista wszystkich raportow malware i CTI.">
-  <TopNav repoUrl={repoUrl} />
+<LandingLayout title={t.archive.title} description={t.archive.description} locale={locale}>
+  <TopNav repoUrl={repoUrl} locale={locale} />
 
   <style>
     .reports-page {
@@ -62,14 +74,12 @@ const reports = buildReportGroups(await getCollection("reports", ({ data }) => !
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 5.6rem;
-      min-height: 5.6rem;
-      padding: 0.9rem;
-      border: 1px solid var(--landing-line);
-      border-radius: 50%;
+      min-width: 5rem;
+      min-height: 5rem;
       color: var(--landing-text-strong);
       font-family: var(--font-display);
       font-size: 1.9rem;
+      border: 1px solid var(--landing-line);
       background: rgba(255, 255, 255, 0.025);
     }
 
@@ -221,12 +231,6 @@ const reports = buildReportGroups(await getCollection("reports", ({ data }) => !
         grid-template-columns: 1fr;
       }
 
-      .archive-count {
-        min-width: 4.5rem;
-        min-height: 4.5rem;
-        border-radius: 1rem;
-      }
-
       .report-row {
         grid-template-columns: 1fr;
       }
@@ -246,61 +250,54 @@ const reports = buildReportGroups(await getCollection("reports", ({ data }) => !
 
   <main class="reports-page">
     <section class="archive-hero">
-      <p class="archive-kicker">Reports Archive</p>
+      <p class="archive-kicker">{t.archive.kicker}</p>
 
       <div class="archive-heading">
-        <h1>All Reports</h1>
+        <h1>{t.archive.heading}</h1>
         <div class="archive-count">{reports.length}</div>
       </div>
 
-      <p class="archive-intro">
-        Central archive for malware analysis notes, reverse engineering write-ups and CTI
-        observations. Each entry is published as a standalone report ready for fast review.
-      </p>
+      <p class="archive-intro">{t.archive.intro}</p>
 
       <div class="archive-meta">
-        <span class="meta-pill">English default</span>
-        <span class="meta-pill">Optional Polish translation</span>
-        <span class="meta-pill">Static archive</span>
+        {t.archive.pills.map((pill) => (
+          <span class="meta-pill">{pill}</span>
+        ))}
       </div>
     </section>
 
-    {
-      reports.length > 0 ? (
-        <section class="reports-grid">
-          {reports.map((report, index) => (
-            <a class="report-row" href={getReportHref(report.reportId, report.primary.data.lang)}>
+    {reports.length > 0 ? (
+      <section class="reports-grid" aria-label={t.archive.heading}>
+        {reports.map((group, index) => {
+          const report = getReportForLocale(group, locale);
+
+          return (
+            <a class="report-row" href={getReportHref(group.reportId, locale)}>
               <span class="report-index">{String(index + 1).padStart(2, "0")}</span>
 
               <div class="report-copy">
-                <h2>{report.primary.data.title}</h2>
-                <p>
-                  {report.primary.data.description ??
-                    "Technical report covering malware behavior, execution flow and detection-relevant findings."}
-                </p>
+                <h2>{report.data.title}</h2>
+                {report.data.description && <p>{report.data.description}</p>}
 
-                <div class="report-tags">
-                  {report.primary.data.tags.length > 0 ? (
-                    report.primary.data.tags.map((tag) => <span class="report-tag">{tag}</span>)
-                  ) : (
-                    <>
-                      <span class="report-tag">Malware analysis</span>
-                      <span class="report-tag">CTI</span>
-                    </>
-                  )}
-                </div>
+                {report.data.tags.length > 0 && (
+                  <div class="report-tags">
+                    {report.data.tags.map((tag) => (
+                      <span class="report-tag">{tag}</span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div class="report-side">
-                <span class="report-date">{report.primary.data.date.toLocaleDateString("pl-PL")}</span>
-                <span class="report-link">Open report ></span>
+                <span class="report-date">{formatDate(report.data.date)}</span>
+                <span class="report-link">{t.archive.open}</span>
               </div>
             </a>
-          ))}
-        </section>
-      ) : (
-        <p class="empty-state">No reports published yet.</p>
-      )
-    }
+          );
+        })}
+      </section>
+    ) : (
+      <p class="empty-state">{t.archive.empty}</p>
+    )}
   </main>
 </LandingLayout>

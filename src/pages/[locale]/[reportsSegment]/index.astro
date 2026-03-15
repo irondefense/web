@@ -1,0 +1,20 @@
+---
+import ArchivePage from "../../../components/reports/ArchivePage.astro";
+import { locales, type Locale } from "../../../lib/i18n";
+import { getLocalizedSegment } from "../../../lib/routes";
+import { siteConfig } from "../../../lib/site";
+
+export async function getStaticPaths() {
+  return locales.map((locale) => ({
+    params: {
+      locale,
+      reportsSegment: getLocalizedSegment("reports", locale),
+    },
+    props: { locale },
+  }));
+}
+
+const { locale } = Astro.props as { locale: Locale };
+---
+
+<ArchivePage locale={locale} repoUrl={siteConfig.repoUrl} />

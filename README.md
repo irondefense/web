@@ -18,7 +18,10 @@ src/content/reports/<report-id>/en.md
 src/content/reports/<report-id>/pl.md
 ```
 
-`en.md` jest wersja domyslna. Polska wersja trafia pod ten sam raport z sufiksem `/pl/`.
+Routing jest lokalizowany:
+
+- `en.md` trafia pod `/en/reports/<report-id>/`
+- `pl.md` trafia pod `/pl/raporty/<report-id>/`
 
 ## Frontmatter
 

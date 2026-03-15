@@ -13,6 +13,15 @@ const reports = defineCollection({
     draft: z.boolean().default(false),
     tlp: z.enum(["clear", "green", "amber", "red"]).default("clear"),
     tags: z.array(z.string()).default([]),
+    yaraRules: z
+      .array(
+        z.object({
+          name: z.string(),
+          description: z.string().optional(),
+          source: z.string(),
+        }),
+      )
+      .default([]),
   }),
 });
 
