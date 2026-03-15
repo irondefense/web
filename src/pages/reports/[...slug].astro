@@ -1,0 +1,29 @@
+---
+import { getCollection, render } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+export async function getStaticPaths() {
+  const reports = await getCollection("reports", ({ data }) => !data.draft);
+
+  return reports.map((report) => ({
+    params: { slug: report.id },
+    props: { report }
+  }));
+}
+
+const { report } = Astro.props;
+const { Content } = await render(report);
+---
+
+<BaseLayout title={report.data.title} description={report.data.description}>
+  <header>
+    <p class="eyebrow">Raport</p>
+    <h1>{report.data.title}</h1>
+    <p class="meta">{report.data.date.toLocaleDateString("pl-PL")}</p>
+    <p><a href="/reports/">Wroc do listy</a></p>
+  </header>
+
+  <article>
+    <Content />
+  </article>
+</BaseLayout>

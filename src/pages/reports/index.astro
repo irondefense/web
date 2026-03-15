@@ -1,0 +1,28 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const reports = (await getCollection("reports", ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+);
+---
+
+<BaseLayout title="Raporty" description="Lista raportow w Markdown.">
+  <header>
+    <p class="eyebrow">Astro + Markdown</p>
+    <h1>Raporty</h1>
+    <p>Dodawaj kolejne pliki w <code>src/content/reports</code>, a pojawia sie tutaj automatycznie.</p>
+  </header>
+
+  <section class="card-list">
+    {
+      reports.map((report) => (
+        <a class="card" href={`/reports/${report.id}/`}>
+          <h2>{report.data.title}</h2>
+          <p class="meta">{report.data.date.toLocaleDateString("pl-PL")}</p>
+          {report.data.description && <p>{report.data.description}</p>}
+        </a>
+      ))
+    }
+  </section>
+</BaseLayout>
