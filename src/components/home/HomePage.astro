@@ -7,8 +7,7 @@ import { getLocalizedPath } from "../../lib/routes";
 import AboutSection from "./AboutSection.astro";
 import HeroSection from "./HeroSection.astro";
 import ReportsPreviewSection from "./ReportsPreviewSection.astro";
-import TopNav from "./TopNav.astro";
-import LandingLayout from "../../layouts/LandingLayout.astro";
+import MainLayout from "../../layouts/MainLayout.astro";
 
 type PreviewReport = {
   href: string;
@@ -59,21 +58,37 @@ for (const fallback of t.home.fallbackReports) {
 
 ---
 
-<LandingLayout
+<MainLayout
   title="MalReports | Malware Analysis Lab"
   description={locale === "en"
     ? "Technical malware analysis and cyber threat intelligence reports."
     : "Techniczne raporty malware analysis i cyber threat intelligence."}
   locale={locale}
 >
-  <TopNav repoUrl={repoUrl} locale={locale} />
-  <HeroSection repoUrl={repoUrl} locale={locale} />
-  <main>
+  <style>
+    .home-page {
+      display: grid;
+      padding: 0 0 2.75rem;
+    }
+
+    .home-content {
+      display: grid;
+      gap: 0;
+    }
+
+    @media (max-width: 760px) {
+      .home-page {
+        padding-bottom: 2rem;
+      }
+    }
+  </style>
+
+  <div class="home-page">
+    <HeroSection repoUrl={repoUrl} locale={locale} />
+
+    <main class="home-content">
     <AboutSection locale={locale} />
     <ReportsPreviewSection previewReports={previewReports} locale={locale} />
-  </main>
-  <footer class="landing-footer">
-    <span>{t.home.footerLeft}</span>
-    <span>{t.home.footerRight}</span>
-  </footer>
-</LandingLayout>
+    </main>
+  </div>
+</MainLayout>

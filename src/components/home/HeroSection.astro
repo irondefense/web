@@ -40,10 +40,341 @@ const reportsHref = getLocalizedPath(locale, "reports");
         {t.githubLabel}
       </a>
 
-      <a class="button" href={reportsHref}>
+      <a class="button primary" href={reportsHref}>
         <Icon name="lucide:file-text" class="button-icon" />
         {t.reportsLabel}
       </a>
     </div>
   </div>
 </section>
+
+<style>
+  .hero {
+    min-height: 86vh;
+    display: flex;
+    align-items: center;
+    padding: 4.8rem 0 6rem;
+  }
+
+  .hero-copy {
+    max-width: 61.25rem;
+  }
+
+  .hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin: 0 0 1.8rem;
+    color: var(--color-accent);
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .hero-kicker::before {
+    content: "";
+    width: 2.2rem;
+    height: 2px;
+    background: currentColor;
+    box-shadow: 0 0 16px rgba(158, 184, 201, 0.22);
+  }
+
+  .wordmark {
+    position: relative;
+    display: inline-grid;
+    margin: 0;
+    font-size: clamp(5rem, 13vw, 9.4rem);
+    font-weight: 700;
+    line-height: 0.88;
+    letter-spacing: -0.08em;
+    text-transform: lowercase;
+  }
+
+  .wordmark > span {
+    grid-area: 1 / 1;
+  }
+
+  .wordmark-base {
+    position: relative;
+    color: var(--color-text-strong);
+    text-shadow: 0 0 28px rgba(255, 255, 255, 0.03);
+  }
+
+  .wordmark-piece {
+    display: inline-block;
+  }
+
+  .wordmark-layer {
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.9;
+  }
+
+  .wordmark-layer-a {
+    color: rgba(255, 124, 143, 0.75);
+    animation: glitchA 7.8s infinite;
+  }
+
+  .wordmark-layer-b {
+    color: rgba(118, 211, 220, 0.78);
+    animation: glitchB 7.8s infinite;
+  }
+
+  .role {
+    margin: 1.4rem 0 0;
+    color: #758392;
+    font-family: var(--font-mono);
+    font-size: 1.34rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .hero-desc {
+    max-width: 42rem;
+    margin: 2.7rem 0 0;
+    padding-left: 1.15rem;
+    border-left: 3px solid var(--color-accent);
+    color: var(--color-text);
+    font-size: clamp(1.15rem, 2vw, 1.48rem);
+    line-height: 1.8;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 2.6rem;
+  }
+
+  .hero-actions .button {
+    min-height: 3.5rem;
+    padding: 0 1.35rem;
+    border-color: var(--color-line-strong);
+    background: rgba(30, 34, 40, 0.9);
+    color: var(--color-accent);
+    font-size: 0.96rem;
+    letter-spacing: 0.08em;
+  }
+
+  .hero-actions .button:hover {
+    border-color: rgba(176, 206, 223, 0.7);
+    background: rgba(40, 45, 52, 0.96);
+    box-shadow: 0 0 0 1px rgba(158, 184, 201, 0.12);
+  }
+
+  .hero-actions .button.secondary {
+    color: var(--color-text-strong);
+    border-color: var(--color-line);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .hero-actions .button.primary {
+    color: var(--color-bg);
+    background: var(--color-accent);
+    border-color: transparent;
+  }
+
+  .hero-actions .button.primary:hover {
+    background: var(--color-accent-strong);
+    box-shadow: none;
+  }
+
+  @keyframes glitchA {
+    0%,
+    12%,
+    24%,
+    38%,
+    52%,
+    66%,
+    100% {
+      transform: translate(0, 0);
+      clip-path: inset(0 0 0 0);
+    }
+
+    6% {
+      transform: translate(-0.012em, 0.005em);
+      clip-path: inset(0 0 72% 0);
+    }
+
+    8% {
+      transform: translate(0.018em, -0.008em);
+      clip-path: inset(54% 0 14% 0);
+    }
+
+    19% {
+      transform: translate(-0.024em, 0.012em);
+      clip-path: inset(12% 0 60% 0);
+    }
+
+    22% {
+      transform: translate(0.014em, 0.028em);
+      clip-path: inset(44% 0 24% 0);
+    }
+
+    33% {
+      transform: translate(-0.02em, -0.012em);
+      clip-path: inset(60% 0 8% 0);
+    }
+
+    36% {
+      transform: translate(0.022em, 0.015em);
+      clip-path: inset(26% 0 42% 0);
+    }
+
+    47% {
+      transform: translate(-0.016em, -0.018em);
+      clip-path: inset(8% 0 68% 0);
+    }
+
+    50% {
+      transform: translate(0.02em, 0.01em);
+      clip-path: inset(48% 0 22% 0);
+    }
+
+    61% {
+      transform: translate(-0.025em, 0.016em);
+      clip-path: inset(18% 0 54% 0);
+    }
+
+    64% {
+      transform: translate(0.014em, -0.02em);
+      clip-path: inset(58% 0 10% 0);
+    }
+
+    76% {
+      transform: translate(-0.018em, 0.02em);
+      clip-path: inset(34% 0 30% 0);
+    }
+
+    80% {
+      transform: translate(0.012em, -0.014em);
+      clip-path: inset(70% 0 4% 0);
+    }
+
+    88% {
+      transform: translate(-0.022em, 0.012em);
+      clip-path: inset(16% 0 58% 0);
+    }
+
+    92% {
+      transform: translate(0.016em, -0.01em);
+      clip-path: inset(50% 0 18% 0);
+    }
+
+    96% {
+      transform: translate(-0.012em, 0.008em);
+      clip-path: inset(30% 0 36% 0);
+    }
+  }
+
+  @keyframes glitchB {
+    0%,
+    10%,
+    26%,
+    40%,
+    54%,
+    70%,
+    100% {
+      transform: translate(0, 0);
+      clip-path: inset(0 0 0 0);
+    }
+
+    4% {
+      transform: translate(0.015em, -0.008em);
+      clip-path: inset(62% 0 6% 0);
+    }
+
+    7% {
+      transform: translate(-0.014em, 0.012em);
+      clip-path: inset(22% 0 54% 0);
+    }
+
+    17% {
+      transform: translate(0.024em, -0.014em);
+      clip-path: inset(72% 0 3% 0);
+    }
+
+    21% {
+      transform: translate(-0.012em, 0.024em);
+      clip-path: inset(38% 0 28% 0);
+    }
+
+    31% {
+      transform: translate(0.02em, -0.018em);
+      clip-path: inset(10% 0 66% 0);
+    }
+
+    35% {
+      transform: translate(-0.022em, 0.015em);
+      clip-path: inset(56% 0 12% 0);
+    }
+
+    45% {
+      transform: translate(0.016em, -0.022em);
+      clip-path: inset(28% 0 40% 0);
+    }
+
+    49% {
+      transform: translate(-0.018em, 0.018em);
+      clip-path: inset(66% 0 8% 0);
+    }
+
+    59% {
+      transform: translate(0.02em, -0.012em);
+      clip-path: inset(14% 0 56% 0);
+    }
+
+    63% {
+      transform: translate(-0.016em, 0.02em);
+      clip-path: inset(52% 0 18% 0);
+    }
+
+    74% {
+      transform: translate(0.014em, -0.016em);
+      clip-path: inset(6% 0 72% 0);
+    }
+
+    78% {
+      transform: translate(-0.02em, 0.012em);
+      clip-path: inset(46% 0 20% 0);
+    }
+
+    87% {
+      transform: translate(0.022em, -0.014em);
+      clip-path: inset(18% 0 52% 0);
+    }
+
+    91% {
+      transform: translate(-0.014em, 0.01em);
+      clip-path: inset(64% 0 8% 0);
+    }
+
+    95% {
+      transform: translate(0.012em, -0.008em);
+      clip-path: inset(34% 0 34% 0);
+    }
+  }
+
+  @media (max-width: 760px) {
+    .hero {
+      min-height: auto;
+      padding: 2rem 0 3rem;
+    }
+
+    .wordmark {
+      font-size: clamp(4rem, 18vw, 6rem);
+    }
+
+    .role {
+      font-size: 1rem;
+    }
+
+    .hero-desc {
+      margin-top: 1.8rem;
+      font-size: 1rem;
+      line-height: 1.8;
+    }
+  }
+</style>

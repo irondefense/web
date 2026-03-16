@@ -13,6 +13,10 @@ export const ui = {
       english: "ENG",
       polish: "PL",
     },
+    footer: {
+      left: "// irondefence © 2026",
+      right: "Threat intelligence for educational purposes only",
+    },
     home: {
       heroKicker: "Cyber Threat Intelligence",
       role: "Malware Analyst / CTI Researcher",
@@ -61,8 +65,6 @@ export const ui = {
       allReports: "All reports >",
       accessAll: "Access all reports",
       readReport: "Read report >",
-      footerLeft: "// irondefence © 2026",
-      footerRight: "Threat intelligence for educational purposes only",
       previewThemes: [
         { tag: "Featured", severity: "Critical", tone: "critical" as const },
         { tag: "Intel", severity: "High", tone: "high" as const },
@@ -134,6 +136,10 @@ export const ui = {
       english: "ENG",
       polish: "PL",
     },
+    footer: {
+      left: "// irondefence © 2026",
+      right: "Threat intelligence wyłącznie do celow edukacyjnych",
+    },
     home: {
       heroKicker: "Cyber Threat Intelligence",
       role: "Analityk malware / badacz CTI",
@@ -183,8 +189,6 @@ export const ui = {
       allReports: "Wszystkie raporty >",
       accessAll: "Przejdz do archiwum",
       readReport: "Czytaj raport >",
-      footerLeft: "// irondefence © 2026",
-      footerRight: "Threat intelligence wyłącznie do celów edukacyjnych",
       previewThemes: [
         { tag: "Lead", severity: "Krytyczny", tone: "critical" as const },
         { tag: "Intel", severity: "Wysoki", tone: "high" as const },

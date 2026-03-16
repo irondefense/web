@@ -11,21 +11,21 @@ import {
   type ReportEntry,
 } from "../../lib/reports";
 import { getLocalizedPath } from "../../lib/routes";
-import TopNav from "../home/TopNav.astro";
-import ReportLayout from "../../layouts/ReportLayout.astro";
+import MainLayout from "../../layouts/MainLayout.astro";
 
 interface Props {
   locale: Locale;
-  repoUrl: string;
   report: ReportEntry;
 }
 
-const { locale, repoUrl, report } = Astro.props;
+const { locale, report } = Astro.props;
 const t = ui[locale].report;
 const { Content, headings } = await render(report);
-const relatedReports = buildReportGroups(
+const reportGroups = buildReportGroups(
   await getCollection("reports", ({ data }) => !data.draft),
-)
+);
+const currentGroup = reportGroups.find((group) => group.reportId === report.data.reportId);
+const relatedReports = reportGroups
   .filter((group) => group.reportId !== report.data.reportId)
   .map((group) => {
     const entry = getReportForLocale(group, locale);
@@ -38,9 +38,56 @@ const relatedReports = buildReportGroups(
 
 const archiveHref = getLocalizedPath(locale, "reports");
 const languageLabel = report.data.lang === "en" ? t.english : t.polish;
+const englishReportHref = currentGroup?.byLang.en
+  ? getReportHref(report.data.reportId, "en")
+  : null;
+const polishReportHref = currentGroup?.byLang.pl
+  ? getReportHref(report.data.reportId, "pl")
+  : null;
+const availableLanguages = [
+  currentGroup?.byLang.en ? t.english : null,
+  currentGroup?.byLang.pl ? t.polish : null,
+]
+  .filter(Boolean)
+  .join(" / ");
 const yaraRules = report.data.yaraRules ?? [];
 const hasYaraRules = yaraRules.length > 0;
 const pageContents = headings.filter((heading) => heading.depth >= 2 && heading.depth <= 3);
+const detailTags = report.data.tags.length > 0
+  ? report.data.tags
+  : [locale === "pl" ? "analiza malware" : "malware analysis"];
+const detailItems = [
+  {
+    icon: "lucide:calendar-days",
+    label: t.published,
+    value: report.data.date.toLocaleDateString(locale === "pl" ? "pl-PL" : "en-GB"),
+  },
+  {
+    icon: "lucide:braces",
+    label: t.reportId,
+    value: report.data.reportId,
+  },
+  {
+    icon: "lucide:languages",
+    label: t.language,
+    value: languageLabel,
+  },
+  {
+    icon: "lucide:badge-info",
+    label: t.available,
+    value: availableLanguages,
+  },
+  {
+    icon: "lucide:shield",
+    label: t.tlp,
+    value: report.data.tlp.toUpperCase(),
+  },
+  {
+    icon: "lucide:list-tree",
+    label: t.sections,
+    value: String(pageContents.length || headings.length || 1),
+  },
+] as const;
 const highlightedYaraRules = await Promise.all(
   yaraRules.map(async (rule) => ({
     ...rule,
@@ -53,29 +100,260 @@ const highlightedYaraRules = await Promise.all(
       .replace('data-language="javascript"', 'data-language="yara"'),
   })),
 );
-
-function formatDate(date: Date) {
-  return date.toLocaleDateString(locale === "pl" ? "pl-PL" : "en-GB");
-}
+const copyLabel = locale === "pl" ? "Kopiuj" : "Copy";
+const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
 ---
 
-<ReportLayout
+<MainLayout
   title={`${report.data.title} | MalReports`}
   description={report.data.description}
-  repoUrl={repoUrl}
   locale={locale}
+  contentClass="page-shell--wide"
+  bodyClass="page-report"
 >
-  <Fragment slot="nav">
-    <TopNav repoUrl={repoUrl} locale={locale} />
-  </Fragment>
-
   <style>
-    .info-card-tags {
+    .report-page {
+      padding: 2.5rem 0 3rem;
+    }
+
+    .report-shell {
+      --report-sticky-offset: 6.4rem;
+      --report-anchor-offset: 7rem;
+
+      display: grid;
+      grid-template-columns: 15rem minmax(0, 1fr) 15rem;
+      gap: 1.6rem;
+      align-items: start;
+    }
+
+    .report-sidebar,
+    .report-toc {
+      position: sticky;
+      top: var(--report-sticky-offset);
+    }
+
+    .report-sidebar {
+      min-width: 0;
+    }
+
+    .report-sidebar-inner,
+    .report-toc-inner {
+      display: grid;
+      gap: 0.9rem;
+      padding: 1rem;
+      border: 1px solid var(--color-line);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .report-sidebar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .report-sidebar-title,
+    .report-toc-title {
+      color: var(--color-accent);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .report-sidebar-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.2rem;
+      height: 2.2rem;
+      color: var(--color-accent);
+    }
+
+    .report-sidebar-toggle-icon {
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .report-sidebar-toggle .icon-close {
+      display: none;
+    }
+
+    .report-sidebar[data-collapsed="true"] .report-sidebar-toggle .icon-open {
+      display: none;
+    }
+
+    .report-sidebar[data-collapsed="true"] .report-sidebar-toggle .icon-close {
+      display: block;
+    }
+
+    .report-sidebar-panel {
+      display: grid;
+      gap: 0.35rem;
+      transition:
+        opacity 180ms ease,
+        transform 180ms ease;
+    }
+
+    .report-sidebar[data-collapsed="true"] .report-sidebar-panel {
+      height: 0;
+      opacity: 0;
+      transform: translateX(-8px);
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .report-sidebar-link {
+      display: block;
+      padding: 0.2rem 0;
+      color: var(--color-text);
+      transition: color 140ms ease;
+    }
+
+    .report-sidebar-link:hover {
+      color: var(--color-text-strong);
+    }
+
+    .report-stack {
+      min-width: 0;
+    }
+
+    .report-hero {
+      display: grid;
+      gap: 1.5rem;
+      padding: clamp(1.5rem, 3vw, 2.4rem);
+    }
+
+    .report-hero-top {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-bottom: 0.25rem;
+      border-bottom: 1px solid var(--color-line);
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.58rem;
+      color: var(--color-accent);
+      font-family: var(--font-mono);
+      font-size: 0.86rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .back-link-icon {
+      width: 0.95rem;
+      height: 0.95rem;
+    }
+
+    .report-lang-switch {
+      display: inline-flex;
+      gap: 0.4rem;
+      padding: 0.2rem;
+      border: 1px solid var(--color-line);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .report-lang-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 3rem;
+      min-height: 2rem;
+      padding: 0 0.7rem;
+      color: var(--color-text-muted);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .report-lang-link.active {
+      color: var(--color-accent);
+      background: linear-gradient(180deg, rgba(158, 184, 201, 0.14), rgba(158, 184, 201, 0.08));
+    }
+
+    .report-lang-link.disabled {
+      opacity: 0.42;
+      pointer-events: none;
+    }
+
+    .report-kicker {
+      display: inline-flex;
+      align-items: center;
+      color: var(--color-accent);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .report-title {
+      max-width: 16ch;
+      font-size: clamp(2.4rem, 5.6vw, 4.4rem);
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+
+    .report-description {
+      max-width: 46rem;
+      padding-left: 1.1rem;
+      border-left: 3px solid var(--color-accent);
+      color: var(--color-text-strong);
+      font-size: 1.1rem;
+      line-height: 1.85;
+    }
+
+    .report-info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem 1.25rem;
+    }
+
+    .info-card {
+      display: grid;
+      grid-template-columns: 1rem 5.25rem minmax(0, 1fr);
+      gap: 0.8rem 1rem;
+      align-items: baseline;
+    }
+
+    .info-card-icon {
+      color: var(--color-accent);
+      transform: translateY(0.08rem);
+    }
+
+    .info-icon {
+      width: 0.95rem;
+      height: 0.95rem;
+    }
+
+    .info-card-label {
+      color: var(--color-text-muted);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .info-card-value {
+      color: var(--color-text-strong);
+      line-height: 1.55;
+      min-width: 0;
+    }
+
+    .info-card-tags {
+      display: flex;
+      flex-wrap: wrap;
       gap: 0.45rem;
-      margin-top: 0;
     }
 
     .info-card-tag {
@@ -84,7 +362,7 @@ function formatDate(date: Date) {
       min-height: 1.72rem;
       padding: 0 0.58rem;
       border: 1px solid rgba(158, 184, 201, 0.2);
-      color: var(--landing-accent);
+      color: var(--color-accent);
       background: rgba(158, 184, 201, 0.06);
       font-family: var(--font-mono);
       font-size: 0.74rem;
@@ -92,237 +370,666 @@ function formatDate(date: Date) {
       letter-spacing: 0.07em;
       text-transform: uppercase;
     }
+
+    .report-tabs-shell {
+      margin-top: 1.6rem;
+    }
+
+    .report-tabs-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .report-tab {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 2.35rem;
+      padding: 0 0.95rem;
+      border: 1px solid var(--color-line);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--color-text-muted);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition:
+        color 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease;
+    }
+
+    .report-tab:hover {
+      color: var(--color-text-strong);
+    }
+
+    .report-tab.active {
+      color: var(--color-accent);
+      border-color: var(--color-line-strong);
+      background: linear-gradient(180deg, rgba(158, 184, 201, 0.1), rgba(158, 184, 201, 0.05));
+    }
+
+    .tab-panel[hidden] {
+      display: none !important;
+    }
+
+    .report-prose,
+    .report-yara {
+      padding: clamp(1.5rem, 3vw, 2.6rem);
+    }
+
+    .report-shell[data-active-tab="yara"] .report-toc {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .report-shell[data-active-tab="yara"] .report-toc-indicator {
+      opacity: 0;
+    }
+
+    .report-yara h2 {
+      margin-bottom: 1.2rem;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+    }
+
+    .yara-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .yara-rule {
+      display: grid;
+      gap: 0.85rem;
+      padding: 1.15rem;
+      border: 1px solid var(--color-line);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .yara-rule-head {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .yara-rule-head h3 {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .yara-rule-head p {
+      color: var(--color-text);
+      line-height: 1.7;
+    }
+
+    .report-toc-nav {
+      position: relative;
+      display: grid;
+      gap: 0.45rem;
+      padding-left: 1rem;
+    }
+
+    .report-toc-rail {
+      position: absolute;
+      top: 0.08rem;
+      bottom: 0.08rem;
+      left: 0;
+      width: 2px;
+      background: var(--color-line);
+      overflow: hidden;
+    }
+
+    .report-toc-indicator {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      min-height: 1.15rem;
+      background: linear-gradient(180deg, rgba(199, 221, 238, 0.24), rgba(158, 184, 201, 0.9));
+      transition:
+        transform 220ms ease,
+        height 220ms ease,
+        opacity 180ms ease;
+    }
+
+    .report-toc-link {
+      color: #7d8b98;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      transition: color 140ms ease;
+    }
+
+    .report-toc-link:hover,
+    .report-toc-link.active {
+      color: var(--color-text-strong);
+    }
+
+    .report-toc-link.current {
+      color: var(--color-accent);
+      font-weight: 700;
+    }
+
+    .report-toc-link.depth-3 {
+      padding-left: 0.85rem;
+      font-size: 0.84rem;
+    }
+
+    .report-prose :global(h1),
+    .report-prose :global(h2),
+    .report-prose :global(h3),
+    .report-prose :global(h4) {
+      scroll-margin-top: var(--report-anchor-offset);
+      margin: 2.8rem 0 1rem;
+      color: var(--color-text-strong);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+    }
+
+    .report-prose :global(h1:first-child),
+    .report-prose :global(h2:first-child) {
+      margin-top: 0;
+    }
+
+    .report-prose :global(h2) {
+      padding-top: 1.35rem;
+      border-top: 1px solid var(--color-line);
+      font-size: clamp(1.9rem, 4vw, 2.45rem);
+    }
+
+    .report-prose :global(h3) {
+      font-size: clamp(1.35rem, 3vw, 1.75rem);
+    }
+
+    .report-prose :global(p),
+    .report-prose :global(li) {
+      max-width: none;
+      color: #d1d9e0;
+      font-size: 1.08rem;
+      line-height: 1.95;
+    }
+
+    .report-prose :global(p:first-of-type) {
+      color: #e7edf2;
+      font-size: 1.15rem;
+    }
+
+    .report-prose :global(p + p) {
+      margin-top: 1.3rem;
+    }
+
+    .report-prose :global(ul),
+    .report-prose :global(ol) {
+      padding-left: 1.4rem;
+    }
+
+    .report-prose :global(li + li) {
+      margin-top: 0.75rem;
+    }
+
+    .report-prose :global(blockquote) {
+      max-width: none;
+      margin: 1.8rem 0;
+      padding: 1.1rem 1.2rem 1.1rem 1.25rem;
+      border-left: 3px solid var(--color-accent);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .report-prose :global(hr) {
+      margin: 2rem 0;
+      border: 0;
+      border-top: 1px solid var(--color-line);
+    }
+
+    .report-prose :global(a) {
+      color: #c7ddee;
+      font-weight: 700;
+      text-decoration: underline;
+      text-decoration-color: rgba(199, 221, 238, 0.35);
+      text-underline-offset: 0.16em;
+    }
+
+    .report-prose :global(a:hover) {
+      color: #eef6fd;
+      text-decoration-color: currentColor;
+    }
+
+    .report-prose :global(figure) {
+      display: grid;
+      gap: 0.32rem;
+      margin: 1.9rem 0 1.35rem;
+    }
+
+    .report-prose :global(figure > img),
+    .report-prose :global(figure > table) {
+      margin: 0 auto;
+    }
+
+    .report-prose :global(.media-block),
+    .report-prose :global(p:has(> img)),
+    .report-prose :global(p:has(> table)) {
+      margin: 1.9rem 0 0.24rem;
+    }
+
+    .report-prose :global(figcaption),
+    .report-prose :global(caption),
+    .report-prose :global(.media-caption),
+    .report-prose :global(p:has(> img) + p:has(> em:only-child)),
+    .report-prose :global(p:has(> table) + p:has(> em:only-child)) {
+      max-width: none;
+      color: #98a8b6;
+      font-size: 0.92rem;
+      font-style: italic;
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    .report-prose :global(p.media-caption) {
+      margin-top: -0.9rem !important;
+      margin-bottom: 0.15rem;
+    }
+
+    .report-prose :global(.media-caption strong) {
+      color: #a9b9c6;
+    }
+
+    .report-prose :global(table) {
+      width: 100%;
+      margin: 1.6rem 0;
+      border-collapse: separate;
+      border-spacing: 0;
+      border: 1px solid var(--color-line);
+      background: rgba(255, 255, 255, 0.025);
+      overflow: hidden;
+    }
+
+    .report-prose :global(th),
+    .report-prose :global(td) {
+      padding: 0.95rem 1rem;
+      border-right: 1px solid rgba(158, 184, 201, 0.1);
+      border-bottom: 1px solid rgba(158, 184, 201, 0.1);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .report-prose :global(th) {
+      color: var(--color-text-strong);
+      background: rgba(158, 184, 201, 0.08);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .report-prose :global(tr > *:last-child) {
+      border-right: 0;
+    }
+
+    .report-prose :global(tbody tr:last-child td) {
+      border-bottom: 0;
+    }
+
+    .report-prose :global(code:not(pre code)),
+    .report-yara :global(code:not(pre code)) {
+      padding: 0.05rem 0.42rem;
+      border: 1px solid rgba(158, 184, 201, 0.14);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .report-prose :global(pre),
+    .report-yara :global(pre) {
+      position: relative;
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    :global(.code-frame) {
+      margin: 1.9rem 0;
+      border: 1px solid var(--color-line);
+      background: linear-gradient(180deg, rgba(17, 20, 25, 0.98), rgba(12, 15, 20, 1));
+      box-shadow: var(--shadow-code);
+      outline: 1px solid rgba(158, 184, 201, 0.06);
+      overflow: hidden;
+    }
+
+    :global(.code-toolbar) {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      min-height: 3rem;
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid rgba(158, 184, 201, 0.1);
+    }
+
+    :global(.code-language),
+    :global(.snippet-copy) {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    :global(.code-language) {
+      color: var(--color-text-strong);
+    }
+
+    :global(.snippet-copy) {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      color: #8fa6b6;
+      transition: color 160ms ease;
+    }
+
+    :global(.snippet-copy:hover),
+    :global(.snippet-copy.copied) {
+      color: var(--color-accent);
+    }
+
+    :global(.snippet-copy-icon) {
+      width: 0.98rem;
+      height: 0.98rem;
+    }
+
+    .report-prose :global(pre.astro-code),
+    .report-yara :global(pre.astro-code) {
+      margin: 0;
+      padding: 1.65rem !important;
+      border: 0;
+      background: transparent !important;
+      box-shadow: none;
+      outline: 0;
+    }
+
+    .report-prose :global(img) {
+      margin: 1.8rem auto;
+      box-shadow: 0 16px 28px rgba(0, 0, 0, 0.16);
+    }
+
+    .snippet-copy-template {
+      display: none;
+    }
+
+    @media (max-width: 1180px) {
+      .report-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .report-sidebar,
+      .report-toc {
+        display: none;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .report-page {
+        padding-top: 1.5rem;
+      }
+
+      .report-hero {
+        gap: 1.2rem;
+        padding: 1.35rem 1rem 1.5rem;
+      }
+
+      .report-hero-top {
+        align-items: start;
+      }
+
+      .report-info-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .info-card {
+        grid-template-columns: 1rem 1fr;
+        gap: 0.25rem 0.75rem;
+      }
+
+      .info-card-label,
+      .info-card-value,
+      .info-card-tags {
+        grid-column: 2;
+      }
+
+      .report-prose,
+      .report-yara {
+        padding: 1.4rem 1rem 1.8rem;
+      }
+
+      .report-prose :global(p),
+      .report-prose :global(li) {
+        font-size: 1rem;
+      }
+
+      :global(.code-toolbar) {
+        padding-inline: 0.85rem;
+      }
+    }
   </style>
 
-  <div class="report-shell" data-report-shell data-active-tab="report">
-    <aside class="report-sidebar" data-report-sidebar>
-      <div class="report-sidebar-inner">
-        <div class="report-sidebar-head">
-          <p class="report-sidebar-title">{t.relatedReports}</p>
-          <button
-            class="report-sidebar-toggle"
-            type="button"
-            aria-expanded="true"
-            aria-controls="report-sidebar-panel"
-            aria-label={t.toggleSidebar}
-            data-report-sidebar-toggle
-          >
-            <Icon name="lucide:panel-left-open" class="report-sidebar-toggle-icon icon-open" />
-            <Icon name="lucide:panel-left-close" class="report-sidebar-toggle-icon icon-close" />
-          </button>
-        </div>
-
-        <div class="report-sidebar-panel" id="report-sidebar-panel" data-report-sidebar-panel>
-          <nav class="report-sidebar-nav" aria-label={t.relatedReports}>
-            {relatedReports.map((item) => (
-              <a class="report-sidebar-link" href={item.href}>
-                <span class="report-sidebar-link-title">{item.title}</span>
-              </a>
-            ))}
-          </nav>
-        </div>
-      </div>
-    </aside>
-
-    <div class="report-stack">
-      <header class="report-hero">
-        <div class="report-topbar">
-          <a class="back-link" href={archiveHref}>
-            <Icon name="lucide:arrow-left" class="back-link-icon" aria-hidden="true" />
-            <span>{t.back}</span>
-          </a>
-        </div>
-
-        <p class="report-kicker">{t.dossier}</p>
-        <h1 class="report-title">{report.data.title}</h1>
-        {report.data.description && <p class="report-description">{report.data.description}</p>}
-
-        <div class="report-info-grid">
-          <div class="info-card">
-            <span class="info-card-icon" aria-hidden="true">
-              <Icon name="lucide:calendar-days" class="info-icon" />
-            </span>
-            <span class="info-card-label">{t.published}</span>
-            <span class="info-card-value">{formatDate(report.data.date)}</span>
+  <div class="report-page">
+    <div class="report-shell" data-report-shell data-active-tab="report">
+      <aside class="report-sidebar" data-report-sidebar>
+        <div class="report-sidebar-inner">
+          <div class="report-sidebar-head">
+            <p class="report-sidebar-title">{t.relatedReports}</p>
+            <button
+              class="report-sidebar-toggle"
+              type="button"
+              aria-expanded="true"
+              aria-controls="report-sidebar-panel"
+              aria-label={t.toggleSidebar}
+              data-report-sidebar-toggle
+            >
+              <Icon name="lucide:panel-left-open" class="report-sidebar-toggle-icon icon-open" />
+              <Icon name="lucide:panel-left-close" class="report-sidebar-toggle-icon icon-close" />
+            </button>
           </div>
 
-          <div class="info-card">
-            <span class="info-card-icon" aria-hidden="true">
-              <Icon name="lucide:braces" class="info-icon" />
-            </span>
-            <span class="info-card-label">{t.reportId}</span>
-            <span class="info-card-value">{report.data.reportId}</span>
-          </div>
-
-          <div class="info-card">
-            <span class="info-card-icon" aria-hidden="true">
-              <Icon name="lucide:languages" class="info-icon" />
-            </span>
-            <span class="info-card-label">{t.language}</span>
-            <span class="info-card-value">{languageLabel}</span>
-          </div>
-
-          <div class="info-card">
-            <span class="info-card-icon" aria-hidden="true">
-              <Icon name="lucide:tags" class="info-icon" />
-            </span>
-            <span class="info-card-label">{t.tags}</span>
-            <div class="info-card-tags">
-              {(report.data.tags.length > 0
-                ? report.data.tags
-                : [locale === "pl" ? "analiza malware" : "malware analysis"]).map((tag) => (
-                <span class="info-card-tag">{tag}</span>
+          <div class="report-sidebar-panel" id="report-sidebar-panel" data-report-sidebar-panel>
+            <nav aria-label={t.relatedReports}>
+              {relatedReports.map((item) => (
+                <a class="report-sidebar-link" href={item.href}>{item.title}</a>
               ))}
-            </div>
+            </nav>
           </div>
-        </div>
-      </header>
-
-      {hasYaraRules ? (
-        <section class="report-tabs-shell" data-report-tabs>
-          <div class="report-tabs-nav" role="tablist" aria-label="Report content tabs">
-            <button
-              class="report-tab active"
-              type="button"
-              role="tab"
-              aria-selected="true"
-              aria-controls="report-panel"
-              id="report-tab"
-              data-tab-trigger="report"
-            >
-              {t.contentTab}
-            </button>
-            <button
-              class="report-tab"
-              type="button"
-              role="tab"
-              aria-selected="false"
-              aria-controls="yara-panel"
-              id="yara-tab"
-              data-tab-trigger="yara"
-            >
-              {t.yaraTab}
-            </button>
-          </div>
-
-          <section
-            class="tab-panel active"
-            id="report-panel"
-            role="tabpanel"
-            aria-labelledby="report-tab"
-            data-tab-panel="report"
-          >
-            <article class="report-prose">
-              <Content />
-            </article>
-          </section>
-
-          <section
-            class="tab-panel"
-            id="yara-panel"
-            role="tabpanel"
-            aria-labelledby="yara-tab"
-            data-tab-panel="yara"
-            hidden
-          >
-            <div class="report-yara">
-              <div class="yara-head">
-                <h2>{t.yaraTitle}</h2>
-              </div>
-
-              {highlightedYaraRules.length > 0 ? (
-                <div class="yara-grid">
-                  {highlightedYaraRules.map((rule) => (
-                    <article class="yara-rule">
-                      <div class="yara-rule-head">
-                        <h3>{rule.name}</h3>
-                        {rule.description && <p>{rule.description}</p>}
-                      </div>
-
-                      <Fragment set:html={rule.html} />
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <p>{t.yaraEmpty}</p>
-              )}
-            </div>
-          </section>
-        </section>
-      ) : (
-        <article class="report-prose">
-          <Content />
-        </article>
-      )}
-    </div>
-
-    {pageContents.length > 0 && (
-      <aside class="report-toc" aria-label={t.pageContents}>
-        <div class="report-toc-inner">
-          <p class="report-toc-title">{t.pageContents}</p>
-          <nav class="report-toc-nav">
-            <span class="report-toc-rail" aria-hidden="true">
-              <span class="report-toc-indicator" data-toc-indicator></span>
-            </span>
-            {pageContents.map((heading) => (
-              <a
-                class:list={[
-                  "report-toc-link",
-                  heading.depth === 3 && "depth-3",
-                ]}
-                href={`#${heading.slug}`}
-                data-toc-link={heading.slug}
-              >
-                {heading.text}
-              </a>
-            ))}
-          </nav>
         </div>
       </aside>
-    )}
+
+      <div class="report-stack">
+        <header class="report-hero surface-panel">
+          <div class="report-hero-top">
+            <a class="back-link" href={archiveHref}>
+              <Icon name="lucide:arrow-left" class="back-link-icon" aria-hidden="true" />
+              <span>{t.back}</span>
+            </a>
+
+            <div class="report-lang-switch" aria-label={t.language}>
+              <a class:list={["report-lang-link", report.data.lang === "en" && "active", !englishReportHref && "disabled"]} href={englishReportHref ?? "#"}>ENG</a>
+              <a class:list={["report-lang-link", report.data.lang === "pl" && "active", !polishReportHref && "disabled"]} href={polishReportHref ?? "#"}>PL</a>
+            </div>
+          </div>
+
+          <p class="report-kicker">{t.dossier}</p>
+          <h1 class="report-title">{report.data.title}</h1>
+          {report.data.description && <p class="report-description">{report.data.description}</p>}
+
+          <div class="report-info-grid">
+            {detailItems.map((item) => (
+              <div class="info-card">
+                <span class="info-card-icon" aria-hidden="true">
+                  <Icon name={item.icon} class="info-icon" />
+                </span>
+                <span class="info-card-label">{item.label}</span>
+                <span class="info-card-value">{item.value}</span>
+              </div>
+            ))}
+
+            <div class="info-card">
+              <span class="info-card-icon" aria-hidden="true">
+                <Icon name="lucide:tags" class="info-icon" />
+              </span>
+              <span class="info-card-label">{t.tags}</span>
+              <div class="info-card-tags">
+                {detailTags.map((tag) => (
+                  <span class="info-card-tag">{tag}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {hasYaraRules ? (
+          <section class="report-tabs-shell" data-report-tabs>
+            <div class="report-tabs-nav" role="tablist" aria-label="Report content tabs">
+              <button
+                class="report-tab active"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="report-panel"
+                id="report-tab"
+                data-tab-trigger="report"
+              >
+                {t.contentTab}
+              </button>
+              <button
+                class="report-tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="yara-panel"
+                id="yara-tab"
+                data-tab-trigger="yara"
+              >
+                {t.yaraTab}
+              </button>
+            </div>
+
+            <section
+              class="tab-panel active"
+              id="report-panel"
+              role="tabpanel"
+              aria-labelledby="report-tab"
+              data-tab-panel="report"
+            >
+              <article class="report-prose surface-panel">
+                <Content />
+              </article>
+            </section>
+
+            <section
+              class="tab-panel"
+              id="yara-panel"
+              role="tabpanel"
+              aria-labelledby="yara-tab"
+              data-tab-panel="yara"
+              hidden
+            >
+              <div class="report-yara surface-panel">
+                <h2>{t.yaraTitle}</h2>
+
+                {highlightedYaraRules.length > 0 ? (
+                  <div class="yara-grid">
+                    {highlightedYaraRules.map((rule) => (
+                      <article class="yara-rule">
+                        <div class="yara-rule-head">
+                          <h3>{rule.name}</h3>
+                          {rule.description && <p>{rule.description}</p>}
+                        </div>
+
+                        <Fragment set:html={rule.html} />
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p>{t.yaraEmpty}</p>
+                )}
+              </div>
+            </section>
+          </section>
+        ) : (
+          <article class="report-prose surface-panel">
+            <Content />
+          </article>
+        )}
+      </div>
+
+      {pageContents.length > 0 && (
+        <aside class="report-toc" aria-label={t.pageContents}>
+          <div class="report-toc-inner">
+            <p class="report-toc-title">{t.pageContents}</p>
+            <nav class="report-toc-nav">
+              <span class="report-toc-rail" aria-hidden="true">
+                <span class="report-toc-indicator" data-toc-indicator></span>
+              </span>
+
+              {pageContents.map((heading) => (
+                <a
+                  class:list={["report-toc-link", heading.depth === 3 && "depth-3"]}
+                  href={`#${heading.slug}`}
+                  data-toc-link={heading.slug}
+                >
+                  {heading.text}
+                </a>
+              ))}
+            </nav>
+          </div>
+        </aside>
+      )}
+    </div>
   </div>
 
-  {hasYaraRules && (
-    <script is:inline>
-      const tabsRoot = document.querySelector("[data-report-tabs]");
-      const reportShell = document.querySelector("[data-report-shell]");
-
-      if (tabsRoot instanceof HTMLElement) {
-        const triggers = tabsRoot.querySelectorAll("[data-tab-trigger]");
-        const panels = tabsRoot.querySelectorAll("[data-tab-panel]");
-
-        const setActiveTab = (tab) => {
-          tabsRoot.dataset.activeTab = tab;
-          if (reportShell instanceof HTMLElement) {
-            reportShell.dataset.activeTab = tab;
-          }
-
-          for (const trigger of triggers) {
-            const active = trigger.getAttribute("data-tab-trigger") === tab;
-            trigger.classList.toggle("active", active);
-            trigger.setAttribute("aria-selected", active ? "true" : "false");
-          }
-
-          for (const panel of panels) {
-            const active = panel.getAttribute("data-tab-panel") === tab;
-            panel.toggleAttribute("hidden", !active);
-            panel.classList.toggle("active", active);
-          }
-        };
-
-        for (const trigger of triggers) {
-          trigger.addEventListener("click", () => {
-            const tab = trigger.getAttribute("data-tab-trigger");
-            if (tab) {
-              setActiveTab(tab);
-            }
-          });
-        }
-      }
-    </script>
-  )}
+  <span
+    class="snippet-copy-template"
+    hidden
+    data-copy-label={copyLabel}
+    data-copied-label={copiedLabel}
+  >
+    <Icon name="lucide:copy" class="snippet-copy-icon" />
+  </span>
 
   <script is:inline>
+    const tabsRoot = document.querySelector("[data-report-tabs]");
+    const reportShell = document.querySelector("[data-report-shell]");
+
+    if (tabsRoot instanceof HTMLElement) {
+      const triggers = tabsRoot.querySelectorAll("[data-tab-trigger]");
+      const panels = tabsRoot.querySelectorAll("[data-tab-panel]");
+
+      const setActiveTab = (tab) => {
+        tabsRoot.dataset.activeTab = tab;
+        if (reportShell instanceof HTMLElement) {
+          reportShell.dataset.activeTab = tab;
+        }
+
+        for (const trigger of triggers) {
+          const active = trigger.getAttribute("data-tab-trigger") === tab;
+          trigger.classList.toggle("active", active);
+          trigger.setAttribute("aria-selected", active ? "true" : "false");
+        }
+
+        for (const panel of panels) {
+          const active = panel.getAttribute("data-tab-panel") === tab;
+          panel.toggleAttribute("hidden", !active);
+          panel.classList.toggle("active", active);
+        }
+      };
+
+      for (const trigger of triggers) {
+        trigger.addEventListener("click", () => {
+          const tab = trigger.getAttribute("data-tab-trigger");
+          if (tab) {
+            setActiveTab(tab);
+          }
+        });
+      }
+    }
+
     const reportSidebar = document.querySelector("[data-report-sidebar]");
     const reportSidebarToggle = document.querySelector("[data-report-sidebar-toggle]");
 
@@ -333,5 +1040,264 @@ function formatDate(date: Date) {
         reportSidebarToggle.setAttribute("aria-expanded", collapsed ? "true" : "false");
       });
     }
+
+    const tocLinks = Array.from(document.querySelectorAll("[data-toc-link]"));
+    const tocIndicator = document.querySelector("[data-toc-indicator]");
+    const observedHeadings = tocLinks
+      .map((link) => {
+        if (!(link instanceof HTMLAnchorElement)) {
+          return null;
+        }
+
+        const slug = link.dataset.tocLink;
+        if (!slug) {
+          return null;
+        }
+
+        const heading = document.getElementById(slug);
+        if (!heading) {
+          return null;
+        }
+
+        return { link, heading };
+      })
+      .filter(Boolean);
+
+    if (observedHeadings.length > 0) {
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const getActiveTab = () =>
+        reportShell?.getAttribute("data-active-tab") ?? "report";
+
+      const setActiveLinks = (visibleIds, currentId) => {
+        for (const item of observedHeadings) {
+          const isVisible = visibleIds.has(item.heading.id);
+          const isCurrent = item.heading.id === currentId;
+          item.link.classList.toggle("active", isVisible);
+          item.link.classList.toggle("current", isCurrent);
+        }
+      };
+
+      const hideIndicator = () => {
+        if (tocIndicator instanceof HTMLElement) {
+          tocIndicator.style.opacity = "0";
+        }
+      };
+
+      const setIndicatorRange = (startIndex, endIndex) => {
+        if (!(tocIndicator instanceof HTMLElement)) {
+          return;
+        }
+
+        if (getActiveTab() === "yara") {
+          hideIndicator();
+          return;
+        }
+
+        const start = observedHeadings[startIndex];
+        const end = observedHeadings[endIndex];
+        const nav = tocIndicator.closest(".report-toc-nav");
+
+        if (!start || !end || !(nav instanceof HTMLElement)) {
+          hideIndicator();
+          return;
+        }
+
+        const navRect = nav.getBoundingClientRect();
+        const startRect = start.link.getBoundingClientRect();
+        const endRect = end.link.getBoundingClientRect();
+        const top = startRect.top - navRect.top + 1;
+        const bottom = endRect.bottom - navRect.top - 1;
+
+        tocIndicator.style.opacity = "1";
+        tocIndicator.style.transform = `translateY(${top}px)`;
+        tocIndicator.style.height = `${Math.max(bottom - top, start.link.offsetHeight)}px`;
+      };
+
+      const getOffset = () => {
+        const raw = getComputedStyle(reportShell ?? document.documentElement)
+          .getPropertyValue("--report-anchor-offset")
+          .trim();
+        const parsed = Number.parseFloat(raw);
+        return Number.isFinite(parsed) ? parsed * 16 : 112;
+      };
+
+      const updateActiveLink = () => {
+        if (getActiveTab() === "yara") {
+          hideIndicator();
+          return;
+        }
+
+        const offset = getOffset() + 20;
+        const viewportStart = window.scrollY + offset;
+        const viewportEnd = window.scrollY + window.innerHeight - 24;
+        let activeIndex = 0;
+        const visibleIndices = [];
+
+        for (const [index, item] of observedHeadings.entries()) {
+          const sectionStart = window.scrollY + item.heading.getBoundingClientRect().top;
+          const nextHeading = observedHeadings[index + 1]?.heading;
+          const sectionEnd = nextHeading
+            ? window.scrollY + nextHeading.getBoundingClientRect().top
+            : document.documentElement.scrollHeight;
+
+          if (sectionStart <= viewportStart) {
+            activeIndex = index;
+          }
+
+          if (sectionEnd > viewportStart && sectionStart < viewportEnd) {
+            visibleIndices.push(index);
+          }
+        }
+
+        const activeId = observedHeadings[activeIndex]?.heading.id;
+        const effectiveVisibleIndices = visibleIndices.length > 0 ? visibleIndices : [activeIndex];
+        const visibleIds = new Set(
+          effectiveVisibleIndices
+            .map((index) => observedHeadings[index]?.heading.id)
+            .filter(Boolean),
+        );
+
+        if (activeId) {
+          setActiveLinks(visibleIds, activeId);
+          setIndicatorRange(
+            effectiveVisibleIndices[0] ?? activeIndex,
+            effectiveVisibleIndices[effectiveVisibleIndices.length - 1] ?? activeIndex,
+          );
+        }
+      };
+
+      for (const item of observedHeadings) {
+        item.link.addEventListener("click", (event) => {
+          event.preventDefault();
+
+          const top = window.scrollY + item.heading.getBoundingClientRect().top - getOffset();
+
+          window.scrollTo({
+            top,
+            behavior: prefersReducedMotion ? "auto" : "smooth",
+          });
+
+          window.history.replaceState(null, "", `#${item.heading.id}`);
+        });
+      }
+
+      updateActiveLink();
+      window.addEventListener("scroll", () => window.requestAnimationFrame(updateActiveLink), { passive: true });
+      window.addEventListener("resize", updateActiveLink);
+
+      if (reportShell instanceof HTMLElement) {
+        const observer = new MutationObserver(() => {
+          window.requestAnimationFrame(updateActiveLink);
+        });
+
+        observer.observe(reportShell, {
+          attributes: true,
+          attributeFilter: ["data-active-tab"],
+        });
+      }
+    } else if (tocIndicator instanceof HTMLElement) {
+      tocIndicator.style.opacity = "0";
+    }
+
+    const proseRoots = document.querySelectorAll(".report-prose");
+
+    for (const root of proseRoots) {
+      const mediaBlocks = root.querySelectorAll("p > img, figure, table");
+      let figureIndex = 0;
+      let tableIndex = 0;
+
+      for (const media of mediaBlocks) {
+        const block =
+          media instanceof HTMLElement && media.tagName === "IMG"
+            ? media.closest("p")
+            : media;
+
+        if (!(block instanceof HTMLElement)) {
+          continue;
+        }
+
+        block.classList.add("media-block");
+
+        const next = block.nextElementSibling;
+
+        if (
+          next instanceof HTMLParagraphElement &&
+          next.childElementCount === 1 &&
+          ["EM", "STRONG"].includes(next.firstElementChild?.tagName ?? "")
+        ) {
+          next.classList.add("media-caption");
+          const label = media.tagName === "TABLE" ? "Table" : "Figure";
+          const index = media.tagName === "TABLE" ? ++tableIndex : ++figureIndex;
+          const sourceText = next.textContent?.trim();
+
+          if (sourceText && !/^(Figure|Table)\s+\d+\./.test(sourceText)) {
+            next.innerHTML = `<em><strong>${label} ${index}.</strong> ${sourceText}</em>`;
+          }
+        }
+      }
+    }
+
+    const snippetTemplate = document.querySelector(".snippet-copy-template");
+
+    if (snippetTemplate instanceof HTMLElement) {
+      const copyText = snippetTemplate.dataset.copyLabel ?? "Copy";
+      const copiedText = snippetTemplate.dataset.copiedLabel ?? "Copied";
+      const copyIcon = snippetTemplate.innerHTML;
+      const codeBlocks = document.querySelectorAll(".report-yara pre.astro-code, .report-prose pre.astro-code");
+
+      for (const block of codeBlocks) {
+        if (!(block instanceof HTMLElement) || block.parentElement?.classList.contains("code-frame")) {
+          continue;
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-frame";
+
+        const toolbar = document.createElement("div");
+        toolbar.className = "code-toolbar";
+
+        const language = document.createElement("span");
+        language.className = "code-language";
+        language.textContent =
+          block.closest(".yara-rule") instanceof HTMLElement
+            ? "YARA"
+            : (block.dataset.language ?? "text").toUpperCase();
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "snippet-copy";
+        button.setAttribute("aria-label", copyText);
+        button.innerHTML = `${copyIcon}<span>${copyText}</span>`;
+
+        button.addEventListener("click", async () => {
+          const content = block.querySelector("code")?.textContent ?? block.textContent ?? "";
+
+          try {
+            await navigator.clipboard.writeText(content);
+            button.classList.add("copied");
+            button.setAttribute("aria-label", copiedText);
+
+            const label = button.querySelector("span");
+            if (label) {
+              label.textContent = copiedText;
+            }
+
+            window.setTimeout(() => {
+              button.classList.remove("copied");
+              button.setAttribute("aria-label", copyText);
+              if (label) {
+                label.textContent = copyText;
+              }
+            }, 1400);
+          } catch (_error) {
+            button.setAttribute("aria-label", copyText);
+          }
+        });
+
+        toolbar.append(language, button);
+        block.parentNode?.insertBefore(wrapper, block);
+        wrapper.append(toolbar, block);
+      }
+    }
   </script>
-</ReportLayout>
+</MainLayout>

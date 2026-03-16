@@ -3,15 +3,13 @@ import { getCollection } from "astro:content";
 import type { Locale } from "../../lib/i18n";
 import { ui } from "../../lib/i18n";
 import { buildReportGroups, getReportForLocale, getReportHref } from "../../lib/reports";
-import TopNav from "../home/TopNav.astro";
-import LandingLayout from "../../layouts/LandingLayout.astro";
+import MainLayout from "../../layouts/MainLayout.astro";
 
 interface Props {
   locale: Locale;
-  repoUrl: string;
 }
 
-const { locale, repoUrl } = Astro.props;
+const { locale } = Astro.props;
 const t = ui[locale];
 const reports = buildReportGroups(await getCollection("reports", ({ data }) => !data.draft));
 
@@ -20,38 +18,24 @@ function formatDate(date: Date) {
 }
 ---
 
-<LandingLayout title={t.archive.title} description={t.archive.description} locale={locale}>
-  <TopNav repoUrl={repoUrl} locale={locale} />
-
+<MainLayout
+  title={t.archive.title}
+  description={t.archive.description}
+  locale={locale}
+  contentClass="page-shell--wide"
+>
   <style>
-    .reports-page {
-      padding: 3rem 0 4rem;
+    .archive-page {
+      display: grid;
+      gap: 2rem;
+      padding: 2.5rem 0 3rem;
     }
 
     .archive-hero {
       display: grid;
       gap: 1.6rem;
-      padding: 2rem 0 2.5rem;
-      border-bottom: 1px solid var(--landing-line);
-    }
-
-    .archive-kicker {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.9rem;
-      margin: 0;
-      color: var(--landing-accent);
-      font-family: var(--font-mono);
-      font-size: 0.96rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-    }
-
-    .archive-kicker::before {
-      content: "";
-      width: 2.4rem;
-      height: 2px;
-      background: var(--landing-accent);
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--color-line);
     }
 
     .archive-heading {
@@ -62,8 +46,6 @@ function formatDate(date: Date) {
     }
 
     .archive-heading h1 {
-      margin: 0;
-      color: var(--landing-text-strong);
       font-size: clamp(3.2rem, 8vw, 5.4rem);
       line-height: 0.95;
       letter-spacing: -0.05em;
@@ -76,18 +58,17 @@ function formatDate(date: Date) {
       justify-content: center;
       min-width: 5rem;
       min-height: 5rem;
-      color: var(--landing-text-strong);
+      color: var(--color-text-strong);
       font-family: var(--font-display);
       font-size: 1.9rem;
-      border: 1px solid var(--landing-line);
+      border: 1px solid var(--color-line);
       background: rgba(255, 255, 255, 0.025);
     }
 
     .archive-intro {
       max-width: 46rem;
-      margin: 0;
       padding-left: 1.15rem;
-      border-left: 3px solid var(--landing-accent);
+      border-left: 3px solid var(--color-accent);
       font-size: 1.08rem;
       line-height: 1.8;
     }
@@ -103,8 +84,8 @@ function formatDate(date: Date) {
       align-items: center;
       min-height: 2.3rem;
       padding: 0 0.85rem;
-      border: 1px solid var(--landing-line);
-      color: var(--landing-text-strong);
+      border: 1px solid var(--color-line);
+      color: var(--color-text-strong);
       font-family: var(--font-mono);
       font-size: 0.84rem;
       font-weight: 600;
@@ -116,7 +97,6 @@ function formatDate(date: Date) {
     .reports-grid {
       display: grid;
       gap: 1rem;
-      padding-top: 2rem;
     }
 
     .report-row {
@@ -125,7 +105,7 @@ function formatDate(date: Date) {
       grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: start;
       padding: 1.4rem 1.45rem;
-      border: 1px solid rgba(158, 184, 201, 0.14);
+      border: 1px solid var(--color-line);
       background: rgba(38, 42, 48, 0.54);
       transition:
         transform 160ms ease,
@@ -135,7 +115,7 @@ function formatDate(date: Date) {
 
     .report-row:hover {
       transform: translateY(-2px);
-      border-color: rgba(158, 184, 201, 0.3);
+      border-color: var(--color-line-strong);
       background: rgba(45, 49, 56, 0.76);
     }
 
@@ -145,8 +125,8 @@ function formatDate(date: Date) {
       justify-content: center;
       min-width: 3.4rem;
       min-height: 3.4rem;
-      border: 1px solid var(--landing-line);
-      color: var(--landing-accent);
+      border: 1px solid var(--color-line);
+      color: var(--color-accent);
       font-family: var(--font-mono);
       font-size: 0.94rem;
       font-weight: 700;
@@ -161,14 +141,11 @@ function formatDate(date: Date) {
     }
 
     .report-copy h2 {
-      margin: 0;
-      color: var(--landing-text-strong);
       font-size: clamp(1.55rem, 3vw, 2.1rem);
       line-height: 1.15;
     }
 
     .report-copy p {
-      margin: 0;
       font-size: 1rem;
       line-height: 1.75;
     }
@@ -211,7 +188,7 @@ function formatDate(date: Date) {
     }
 
     .report-link {
-      color: var(--landing-accent);
+      color: var(--color-accent);
       font-family: var(--font-mono);
       font-size: 0.92rem;
       font-weight: 700;
@@ -220,8 +197,7 @@ function formatDate(date: Date) {
     }
 
     .empty-state {
-      padding: 2rem 0 0;
-      color: var(--landing-text);
+      color: var(--color-text);
       font-size: 1rem;
       line-height: 1.8;
     }
@@ -248,9 +224,9 @@ function formatDate(date: Date) {
     }
   </style>
 
-  <main class="reports-page">
+  <div class="archive-page">
     <section class="archive-hero">
-      <p class="archive-kicker">{t.archive.kicker}</p>
+      <p class="eyebrow">{t.archive.kicker}</p>
 
       <div class="archive-heading">
         <h1>{t.archive.heading}</h1>
@@ -299,5 +275,5 @@ function formatDate(date: Date) {
     ) : (
       <p class="empty-state">{t.archive.empty}</p>
     )}
-  </main>
-</LandingLayout>
+  </div>
+</MainLayout>

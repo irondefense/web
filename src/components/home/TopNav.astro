@@ -20,6 +20,7 @@ const homeHref = getLocaleRoot(locale);
 const reportsHref = getLocalizedPath(locale, "reports");
 const englishHref = getLocaleSwitchPath(currentPath ?? Astro.url.pathname, "en");
 const polishHref = getLocaleSwitchPath(currentPath ?? Astro.url.pathname, "pl");
+const isReportsPage = (currentPath ?? Astro.url.pathname).startsWith(reportsHref);
 ---
 
 <header class="topbar" data-topbar-root>
@@ -43,7 +44,7 @@ const polishHref = getLocaleSwitchPath(currentPath ?? Astro.url.pathname, "pl");
 
   <nav class="topnav" aria-label="Primary">
     <div class="topnav-links">
-      <a class="nav-link primary" href={reportsHref}>{t.reports}</a>
+      <a class:list={["nav-link", isReportsPage && "active"]} href={reportsHref}>{t.reports}</a>
     </div>
 
     <span class="nav-divider" aria-hidden="true"></span>
@@ -54,7 +55,6 @@ const polishHref = getLocaleSwitchPath(currentPath ?? Astro.url.pathname, "pl");
     </a>
 
     <div class="nav-lang-switch">
-      <!-- <span class="nav-lang-label">{t.language}</span> -->
       <div class="nav-lang-track">
         <a class:list={["nav-lang-link", locale === "en" && "active"]} href={englishHref}>{t.english}</a>
         <a class:list={["nav-lang-link", locale === "pl" && "active"]} href={polishHref}>{t.polish}</a>
@@ -79,7 +79,7 @@ const polishHref = getLocaleSwitchPath(currentPath ?? Astro.url.pathname, "pl");
       </div>
 
       <div class="mobile-drawer-body">
-        <a class="mobile-link primary" href={reportsHref} data-menu-link>{t.reports}</a>
+        <a class:list={["mobile-link", "primary", isReportsPage && "active"]} href={reportsHref} data-menu-link>{t.reports}</a>
         <a class="mobile-link" href={repoUrl} target="_blank" rel="noreferrer" data-menu-link>
           <Icon name="lucide:github" class="mobile-link-icon" />
           <span>{t.github}</span>
