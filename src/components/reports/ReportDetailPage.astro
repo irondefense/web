@@ -675,6 +675,9 @@ const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
 
     .report-prose :global(code:not(pre code)),
     .report-yara :global(code:not(pre code)) {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
       padding: 0.05rem 0.42rem;
       border: 1px solid rgba(158, 184, 201, 0.14);
       background: rgba(255, 255, 255, 0.04);
