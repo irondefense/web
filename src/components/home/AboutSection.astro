@@ -11,7 +11,7 @@ const { locale } = Astro.props;
 const t = ui[locale].home;
 ---
 
-<section class="section" aria-labelledby="about-title">
+<section class="section snap-section" aria-labelledby="about-title">
   <SectionHeading index={t.aboutIndex} title={t.aboutTitle} id="about-title" />
 
   <div class="about-layout">
@@ -20,14 +20,14 @@ const t = ui[locale].home;
       <p>{t.aboutP2}</p>
       <p class="raw-line">{t.aboutRaw}</p>
 
-      <div class="stats">
+      <!-- <div class="stats">
         {t.stats.map((item) => (
           <div class="stat">
             <strong>{item.title}</strong>
             <span>{item.label}</span>
           </div>
         ))}
-      </div>
+      </div> -->
     </div>
 
     <div class="capabilities">

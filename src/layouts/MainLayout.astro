@@ -1,4 +1,5 @@
 ---
+import logoUrl from "../../favicon.svg?url";
 import TopNav from "../components/home/TopNav.astro";
 import { type Locale, ui } from "../lib/i18n";
 import { siteConfig } from "../lib/site";
@@ -7,6 +8,7 @@ interface Props {
   title: string;
   description?: string;
   locale?: Locale;
+  htmlClass?: string;
   bodyClass?: string;
   contentClass?: string;
   hideFooter?: boolean;
@@ -16,6 +18,7 @@ const {
   title,
   description = "irondefense",
   locale = "en",
+  htmlClass,
   bodyClass,
   contentClass,
   hideFooter = false,
@@ -26,11 +29,12 @@ const skipLabel = locale === "pl" ? "Przejdz do tresci" : "Skip to content";
 ---
 
 <!doctype html>
-<html lang={locale}>
+<html lang={locale} class={htmlClass}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#14171b" />
+    <link rel="icon" type="image/svg+xml" href={logoUrl} />
     <title>{title}</title>
     <meta name="description" content={description} />
     <slot name="head" />
@@ -793,7 +797,7 @@ const skipLabel = locale === "pl" ? "Przejdz do tresci" : "Skip to content";
       </main>
 
       {!hideFooter && (
-        <footer class="site-footer">
+        <footer class="site-footer snap-section">
           <div class="page-shell site-footer-inner">
             <span>{footer.left}</span>
             <span>{footer.right}</span>

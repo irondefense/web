@@ -1,7 +1,7 @@
 ---
 import ArchivePage from "../../../components/reports/ArchivePage.astro";
 import { locales, type Locale } from "../../../lib/i18n";
-import { getLocalizedSegment } from "../../../lib/routes";
+import { getLocalizedPath, getLocalizedSegment } from "../../../lib/routes";
 
 export async function getStaticPaths() {
   return locales.map((locale) => ({
@@ -14,6 +14,11 @@ export async function getStaticPaths() {
 }
 
 const { locale } = Astro.props as { locale: Locale };
+const englishArchiveHref = getLocalizedPath("en", "reports");
+
+if (locale === "en") {
+  return Astro.redirect(englishArchiveHref);
+}
 ---
 
 <ArchivePage locale={locale} />

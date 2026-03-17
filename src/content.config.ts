@@ -3,7 +3,7 @@ import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 
 const reports = defineCollection({
-  loader: glob({ pattern: "**/*.md", base: "./src/content/reports" }),
+  loader: glob({ pattern: "**/{en,pl}.md", base: "./src/content/reports" }),
   schema: z.object({
     reportId: z.string(),
     lang: z.enum(["en", "pl"]),
@@ -25,4 +25,14 @@ const reports = defineCollection({
   }),
 });
 
-export const collections = { reports };
+const reportIoc = defineCollection({
+  loader: glob({ pattern: "**/ioc.md", base: "./src/content/reports" }),
+  schema: z.object({
+    reportId: z.string(),
+    draft: z.boolean().default(false),
+    title: z.string().optional(),
+    description: z.string().optional(),
+  }),
+});
+
+export const collections = { reports, reportIoc };

@@ -64,6 +64,8 @@ for (const fallback of t.home.fallbackReports) {
     ? "Technical malware analysis and cyber threat intelligence reports."
     : "Techniczne raporty malware analysis i cyber threat intelligence."}
   locale={locale}
+  htmlClass="page-home"
+  bodyClass="page-home"
 >
   <style>
     .home-page {
@@ -74,6 +76,19 @@ for (const fallback of t.home.fallbackReports) {
     .home-content {
       display: grid;
       gap: 0;
+    }
+
+    @media (min-width: 1024px) {
+      :global(html.page-home),
+      :global(body.page-home) {
+        scroll-snap-type: y mandatory;
+        scroll-padding-top: var(--topbar-height);
+      }
+
+      :global(body.page-home .snap-section) {
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+      }
     }
 
     @media (max-width: 760px) {

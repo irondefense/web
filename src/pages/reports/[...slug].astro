@@ -7,23 +7,12 @@ export async function getStaticPaths() {
     await getCollection("reports", ({ data }) => !data.draft),
   );
 
-  return reportGroups.flatMap((group) => {
-    const paths = [
-      {
-        params: { slug: group.reportId },
-        props: { target: `/en/reports/${group.reportId}/` },
-      },
-    ];
-
-    if (group.byLang.pl) {
-      paths.push({
-        params: { slug: `${group.reportId}/pl` },
-        props: { target: `/pl/raporty/${group.reportId}/` },
-      });
-    }
-
-    return paths;
-  });
+  return reportGroups
+    .filter((group) => group.byLang.pl)
+    .map((group) => ({
+      params: { slug: `${group.reportId}/pl` },
+      props: { target: `/pl/raporty/${group.reportId}/` },
+    }));
 }
 
 return Astro.redirect(Astro.props.target);

@@ -1,3 +1,3 @@
 export const siteConfig = {
-  repoUrl: "https://github.com/irondefence/MalReports",
+  repoUrl: "https://github.com/irondefense",
 } as const;

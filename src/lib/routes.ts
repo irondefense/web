@@ -14,7 +14,7 @@ export function isLocale(value: string): value is Locale {
 }
 
 export function getLocaleRoot(locale: Locale = defaultLocale) {
-  return `/${locale}/`;
+  return locale === defaultLocale ? "/" : `/${locale}/`;
 }
 
 export function getLocalizedSegment(route: RouteKey, locale: Locale) {
@@ -30,26 +30,39 @@ export function getLocalizedReportPath(reportId: string, locale: Locale) {
 }
 
 export function getLocaleSwitchPath(currentPath: string, targetLocale: Locale) {
-  const normalized = currentPath.startsWith("/") ? currentPath : `/${currentPath}`;
+  const normalized = currentPath.startsWith("/")
+    ? currentPath
+    : `/${currentPath}`;
   const segments = normalized.split("/").filter(Boolean);
 
   if (segments.length === 0) {
     return getLocaleRoot(targetLocale);
   }
 
-  const [, ...rest] = segments;
+  const hasLocalePrefix = isLocale(segments[0] ?? "");
+  const rest = hasLocalePrefix ? segments.slice(1) : segments;
+
   const translated = rest.map((segment, index) => {
     if (index !== 0) {
       return segment;
     }
 
-    if (segment === routeSegments.reports.en || segment === routeSegments.reports.pl) {
+    if (
+      segment === routeSegments.reports.en ||
+      segment === routeSegments.reports.pl
+    ) {
       return getLocalizedSegment("reports", targetLocale);
     }
 
     return segment;
   });
 
-  const path = [targetLocale, ...translated].join("/");
-  return `/${path}${normalized.endsWith("/") ? "/" : ""}`;
+  const root = getLocaleRoot(targetLocale).replace(/\/$/, "");
+  const suffix = translated.join("/");
+
+  if (!suffix) {
+    return getLocaleRoot(targetLocale);
+  }
+
+  return `${root}/${suffix}${normalized.endsWith("/") ? "/" : ""}`;
 }

@@ -21,10 +21,12 @@ interface Props {
 const { locale, report } = Astro.props;
 const t = ui[locale].report;
 const { Content, headings } = await render(report);
-const reportGroups = buildReportGroups(
-  await getCollection("reports", ({ data }) => !data.draft),
-);
+const reports = await getCollection("reports", ({ data }) => !data.draft);
+const reportGroups = buildReportGroups(reports);
+const reportIocEntries = await getCollection("reportIoc", ({ data }) => !data.draft);
 const currentGroup = reportGroups.find((group) => group.reportId === report.data.reportId);
+const iocEntry = reportIocEntries.find((entry) => entry.data.reportId === report.data.reportId) ?? null;
+const iocContent = iocEntry ? await render(iocEntry) : null;
 const relatedReports = reportGroups
   .filter((group) => group.reportId !== report.data.reportId)
   .map((group) => {
@@ -52,6 +54,7 @@ const availableLanguages = [
   .join(" / ");
 const yaraRules = report.data.yaraRules ?? [];
 const hasYaraRules = yaraRules.length > 0;
+const hasIoc = Boolean(iocContent);
 const pageContents = headings.filter((heading) => heading.depth >= 2 && heading.depth <= 3);
 const detailTags = report.data.tags.length > 0
   ? report.data.tags
@@ -76,11 +79,6 @@ const detailItems = [
     icon: "lucide:badge-info",
     label: t.available,
     value: availableLanguages,
-  },
-  {
-    icon: "lucide:shield",
-    label: t.tlp,
-    value: report.data.tlp.toUpperCase(),
   },
   {
     icon: "lucide:list-tree",
@@ -313,16 +311,17 @@ const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
     }
 
     .report-info-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
     }
 
     .info-card {
       display: grid;
-      grid-template-columns: 1rem 5.25rem minmax(0, 1fr);
-      gap: 0.8rem 1rem;
-      align-items: baseline;
+      grid-template-columns: 1rem 6.5rem minmax(0, 1fr);
+      gap: 0.35rem 1rem;
+      align-items: start;
+      min-width: 0;
     }
 
     .info-card-icon {
@@ -348,12 +347,14 @@ const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
       color: var(--color-text-strong);
       line-height: 1.55;
       min-width: 0;
+      overflow-wrap: anywhere;
     }
 
     .info-card-tags {
       display: flex;
       flex-wrap: wrap;
       gap: 0.45rem;
+      min-width: 0;
     }
 
     .info-card-tag {
@@ -421,12 +422,12 @@ const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
       padding: clamp(1.5rem, 3vw, 2.6rem);
     }
 
-    .report-shell[data-active-tab="yara"] .report-toc {
+    .report-shell[data-active-tab]:not([data-active-tab="report"]) .report-toc {
       opacity: 0.3;
       pointer-events: none;
     }
 
-    .report-shell[data-active-tab="yara"] .report-toc-indicator {
+    .report-shell[data-active-tab]:not([data-active-tab="report"]) .report-toc-indicator {
       opacity: 0;
     }
 
@@ -780,10 +781,6 @@ const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
         align-items: start;
       }
 
-      .report-info-grid {
-        grid-template-columns: 1fr;
-      }
-
       .info-card {
         grid-template-columns: 1rem 1fr;
         gap: 0.25rem 0.75rem;
@@ -847,11 +844,6 @@ const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
               <Icon name="lucide:arrow-left" class="back-link-icon" aria-hidden="true" />
               <span>{t.back}</span>
             </a>
-
-            <div class="report-lang-switch" aria-label={t.language}>
-              <a class:list={["report-lang-link", report.data.lang === "en" && "active", !englishReportHref && "disabled"]} href={englishReportHref ?? "#"}>ENG</a>
-              <a class:list={["report-lang-link", report.data.lang === "pl" && "active", !polishReportHref && "disabled"]} href={polishReportHref ?? "#"}>PL</a>
-            </div>
           </div>
 
           <p class="report-kicker">{t.dossier}</p>
@@ -883,7 +875,7 @@ const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
           </div>
         </header>
 
-        {hasYaraRules ? (
+        {hasYaraRules || hasIoc ? (
           <section class="report-tabs-shell" data-report-tabs>
             <div class="report-tabs-nav" role="tablist" aria-label="Report content tabs">
               <button
@@ -897,17 +889,32 @@ const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
               >
                 {t.contentTab}
               </button>
-              <button
-                class="report-tab"
-                type="button"
-                role="tab"
-                aria-selected="false"
-                aria-controls="yara-panel"
-                id="yara-tab"
-                data-tab-trigger="yara"
-              >
-                {t.yaraTab}
-              </button>
+              {hasYaraRules && (
+                <button
+                  class="report-tab"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="yara-panel"
+                  id="yara-tab"
+                  data-tab-trigger="yara"
+                >
+                  {t.yaraTab}
+                </button>
+              )}
+              {hasIoc && (
+                <button
+                  class="report-tab"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="ioc-panel"
+                  id="ioc-tab"
+                  data-tab-trigger="ioc"
+                >
+                  {t.iocTab}
+                </button>
+              )}
             </div>
 
             <section
@@ -922,35 +929,52 @@ const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
               </article>
             </section>
 
-            <section
-              class="tab-panel"
-              id="yara-panel"
-              role="tabpanel"
-              aria-labelledby="yara-tab"
-              data-tab-panel="yara"
-              hidden
-            >
-              <div class="report-yara surface-panel">
-                <h2>{t.yaraTitle}</h2>
+            {hasYaraRules && (
+              <section
+                class="tab-panel"
+                id="yara-panel"
+                role="tabpanel"
+                aria-labelledby="yara-tab"
+                data-tab-panel="yara"
+                hidden
+              >
+                <div class="report-yara surface-panel">
+                  <h2>{t.yaraTitle}</h2>
 
-                {highlightedYaraRules.length > 0 ? (
-                  <div class="yara-grid">
-                    {highlightedYaraRules.map((rule) => (
-                      <article class="yara-rule">
-                        <div class="yara-rule-head">
-                          <h3>{rule.name}</h3>
-                          {rule.description && <p>{rule.description}</p>}
-                        </div>
+                  {highlightedYaraRules.length > 0 ? (
+                    <div class="yara-grid">
+                      {highlightedYaraRules.map((rule) => (
+                        <article class="yara-rule">
+                          <div class="yara-rule-head">
+                            <h3>{rule.name}</h3>
+                            {rule.description && <p>{rule.description}</p>}
+                          </div>
 
-                        <Fragment set:html={rule.html} />
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p>{t.yaraEmpty}</p>
-                )}
-              </div>
-            </section>
+                          <Fragment set:html={rule.html} />
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>{t.yaraEmpty}</p>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {iocContent && (
+              <section
+                class="tab-panel"
+                id="ioc-panel"
+                role="tabpanel"
+                aria-labelledby="ioc-tab"
+                data-tab-panel="ioc"
+                hidden
+              >
+                <article class="report-prose surface-panel">
+                  <iocContent.Content />
+                </article>
+              </section>
+            )}
           </section>
         ) : (
           <article class="report-prose surface-panel">
@@ -1088,7 +1112,7 @@ const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
           return;
         }
 
-        if (getActiveTab() === "yara") {
+        if (getActiveTab() !== "report") {
           hideIndicator();
           return;
         }
@@ -1122,7 +1146,7 @@ const copiedLabel = locale === "pl" ? "Skopiowano" : "Copied";
       };
 
       const updateActiveLink = () => {
-        if (getActiveTab() === "yara") {
+        if (getActiveTab() !== "report") {
           hideIndicator();
           return;
         }

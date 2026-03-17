@@ -7,7 +7,7 @@ import {
   getReportForLocale,
   type ReportEntry,
 } from "../../../lib/reports";
-import { getLocalizedSegment } from "../../../lib/routes";
+import { getLocalizedReportPath, getLocalizedSegment } from "../../../lib/routes";
 
 export async function getStaticPaths() {
   const reportGroups = buildReportGroups(
@@ -33,6 +33,11 @@ const { locale, report } = Astro.props as {
   locale: Locale;
   report: ReportEntry;
 };
+const englishReportHref = getLocalizedReportPath(report.data.reportId, "en");
+
+if (locale === "en") {
+  return Astro.redirect(englishReportHref);
+}
 ---
 
 <ReportDetailPage locale={locale} report={report} />

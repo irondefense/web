@@ -1,6 +1,7 @@
 ---
 import HomePage from "../../components/home/HomePage.astro";
 import { locales, type Locale } from "../../lib/i18n";
+import { getLocaleRoot } from "../../lib/routes";
 import { siteConfig } from "../../lib/site";
 
 export async function getStaticPaths() {
@@ -11,6 +12,11 @@ export async function getStaticPaths() {
 }
 
 const { locale } = Astro.props as { locale: Locale };
+const englishHomeHref = getLocaleRoot("en");
+
+if (locale === "en") {
+  return Astro.redirect(englishHomeHref);
+}
 ---
 
 <HomePage locale={locale} repoUrl={siteConfig.repoUrl} />

@@ -1,3 +1,6 @@
 ---
-return Astro.redirect("/en/");
+import HomePage from "../components/home/HomePage.astro";
+import { siteConfig } from "../lib/site";
 ---
+
+<HomePage locale="en" repoUrl={siteConfig.repoUrl} />

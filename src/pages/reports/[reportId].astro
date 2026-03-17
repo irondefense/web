@@ -1,0 +1,22 @@
+---
+import { getCollection } from "astro:content";
+import ReportDetailPage from "../../components/reports/ReportDetailPage.astro";
+import { buildReportGroups, getReportForLocale, type ReportEntry } from "../../lib/reports";
+
+export async function getStaticPaths() {
+  const reportGroups = buildReportGroups(
+    await getCollection("reports", ({ data }) => !data.draft),
+  );
+
+  return reportGroups.map((group) => ({
+    params: { reportId: group.reportId },
+    props: { report: getReportForLocale(group, "en") },
+  }));
+}
+
+const { report } = Astro.props as {
+  report: ReportEntry;
+};
+---
+
+<ReportDetailPage locale="en" report={report} />
